@@ -13,7 +13,8 @@ import { WebSocketServer } from 'ws';
 import { Sim } from '../game/shared/sim';
 import { TICK } from '../game/shared/weapons';
 
-const DATA = path.join(process.cwd(), '.data', 'social.json');
+// DATA_DIR permite apontar para um disco/volume persistente na hospedagem (amigos e IDs ficam salvos ali).
+const DATA = path.join(process.env.DATA_DIR || path.join(process.cwd(), '.data'), 'social.json');
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const BOTNAMES = ['Alfa', 'Bravo', 'Cobra', 'Delta', 'Eco', 'Fênix', 'Gamma', 'Hélix'];
 

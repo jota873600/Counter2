@@ -27,6 +27,9 @@ O modo **offline contra bots** roda 100% no navegador (mesma simulação do serv
 4. No B clique **Pronto**; o dono (A) clica **Iniciar partida**. Vagas vazias viram bots. Se alguém sair/cair, um bot assume
    (reconectando com o mesmo ID, o jogador retoma o controle).
 
+## Online e PWA
+Veja `DEPLOY.md` para publicar o jogo (multiplayer com amigos) e instalar como app no celular e no PC.
+
 ## Estrutura
 ```
 src/
