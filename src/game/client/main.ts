@@ -32,6 +32,9 @@ const kindOf = (id) => { const w = W[id]; return !w ? 'gun' : w.slot === 'knife'
 
 export function startApp(root) { return new App(root); }
 
+/** Indicador de sinal (barrinhas) conforme o ping. */
+const sigBars = (ms) => { const n = ms <= 80 ? 4 : ms <= 150 ? 3 : ms <= 250 ? 2 : 1; return `<span class="sig s${n}">${[1, 2, 3, 4].map((k) => `<i${k <= n ? ' class="on"' : ''}></i>`).join('')}</span>`; };
+
 class App {
   constructor(root) {
     const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
@@ -104,7 +107,8 @@ class App {
     if (this.chatOpen) return this.closeChat();
     if (this.hud.shopOpen) return this.closeShop();
     if (this.hud.helpOpen()) return this.hud.showHelp(false);
-    const s = document.querySelector('.set'); if (s) { s.querySelector('[data-x=close]').click(); }
+    const all = document.querySelectorAll('.set'), s = all[all.length - 1]; // fecha o painel que está por cima
+    if (s) { const c = s.querySelector('[data-x=close]'); if (c) c.click(); }
   }
   openFullscreenOrTab() {
     const el = document.documentElement, inFrame = window.self !== window.top;
@@ -166,6 +170,7 @@ class App {
   }
 
   leaveGame() {
+    this.menus.dropPause();
     this.input.exitLock(); this.hud.lockOverlay(null); this.hud.openShop(false); this.hud.scoreboard(false);
     for (const c of this.chars.values()) this.engine.scene.remove(c.obj);
     for (const m of [...this.dropMeshes.values(), ...this.nadeMeshes.values()]) this.engine.scene.remove(m);
@@ -495,7 +500,9 @@ class App {
     if (!alive && this.deadT > 1.6 && this.spectate) { const p = w.ps.find((x) => x.i === this.spectate); if (p) spec = `Assistindo: <b>${p.n}</b>`; }
     hud.update({ hp: you.hp, ar: you.ar, hm: you.hm, mo: you.mo, wn: wd.name + (cnt >= 0 ? ` ×${cnt}` : ''), mag: isGun ? you.am[0] : -1, res: you.am[1], rl: you.rlp >= 0,
       sc: w.sc, al, tm, ph: PHN[w.ph] || '', rd: `Round ${w.rd}/15`, gap, scoped, dead: !alive, fixed: this.input.fallbackActive, spec,
-      fps: settings.fps ? `${this.fps} FPS<br>${this.transport === this.net ? this.net.ping + ' ms' : 'offline'}` : (this.transport === this.net ? `${this.net.ping} ms` : '') });
+      fps: settings.fps ? `${this.fps} FPS<br>${this.transport === this.net ? this.net.ping + ' ms ' + sigBars(this.net.ping) : 'offline'}` : (this.transport === this.net ? `${this.net.ping} ms ${sigBars(this.net.ping)}` : '') });
+    let ngr = 0; for (const k in you.inv) if (W[k] && W[k].slot === 'grenade') ngr += you.inv[k] | 0;
+    this.touch.setBadge('grenade', ngr); this.touch.setBadge('medkit', you.inv.medkit | 0);
     hud.medbar(you.mdp);
     const m = this.me;
     // Dicas contextuais

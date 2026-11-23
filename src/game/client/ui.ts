@@ -4,6 +4,7 @@
  * mira dinâmica, hitmarker, indicador de dano, números flutuantes, loja (B), placar (Tab),
  * dicas contextuais, overlays de Pointer Lock e painel "Como jogar" com teclas (keycaps).
  */
+import { ICON } from './icons';
 import * as THREE from 'three';
 import { W, ITEMS, SHOP_CATS } from '../shared/weapons';
 import { settings, bindLabel } from './settings';
@@ -32,16 +33,17 @@ export class HUD {
       <div class="dmgdir"></div>
       <div class="msg"><b></b><span></span></div>
       <div class="hint"></div><div class="medbar"><i></i></div><div class="spec"></div>
-      <div class="hp-box"><div class="stat" data-s="hp"><small>Vida</small><b>100</b><div class="bar"><i style="width:100%"></i></div></div><div class="stat" data-s="ar"><small>Colete <span data-k="hm"></span></small><b>0</b><div class="bar ar"><i style="width:0"></i></div></div></div>
-      <div class="money">$800</div>
-      <div class="ammo-box"><small data-k="wn"></small><b data-k="mag">0</b> <span data-k="res">/ 0</span></div>
+      <div class="hp-box"><div class="stat" data-s="hp"><span class="ic">${ICON.health}</span><b>100</b><div class="bar"><i style="width:100%"></i></div></div><div class="stat ar" data-s="ar"><span class="ic">${ICON.shield}</span><b>0</b><small data-k="hm"></small><div class="bar ar"><i style="width:0"></i></div></div></div>
+      <div class="money"><span class="ic">${ICON.coins}</span><span data-k="mo">$800</span></div>
+      <div class="ammo-box"><span class="ic">${ICON.bullet}</span><div class="am"><small data-k="wn"></small><div class="nums"><b data-k="mag">0</b> <span data-k="res">/ 0</span></div></div></div>
       <div class="chatlog"></div>
       <div class="keybar"></div>
-      <div class="fps"></div>`;
+      <div class="fps"></div><button class="pausebtn ui-block" data-x="pause" title="Menu">☰</button>`;
     root.appendChild(h);
     this.layer = document.createElement('div'); this.layer.className = 'layer hud'; root.appendChild(this.layer); // números flutuantes
     this.q = (s) => h.querySelector(s);
     this.mini = this.q('.mini canvas').getContext('2d'); this.mapCv = null;
+    this.q('.pausebtn').onclick = () => this.app.menus.pause();
     // Placar, loja, ajuda, overlay
     this.sb = document.createElement('div'); this.sb.className = 'sb panel'; root.appendChild(this.sb);
     this.shop = document.createElement('div'); this.shop.className = 'shop hide ui-block'; root.appendChild(this.shop);
@@ -159,8 +161,8 @@ export class HUD {
   update(s) {
     const q = this.q;
     if (this.set('hp', s.hp)) { const e = q('[data-s=hp]'); e.querySelector('b').textContent = s.hp; e.querySelector('i').style.width = s.hp + '%'; e.classList.toggle('low', s.hp <= 30); }
-    if (this.set('ar', s.ar + '|' + s.hm)) { const e = q('[data-s=ar]'); e.querySelector('b').textContent = s.ar; e.querySelector('i').style.width = s.ar + '%'; q('[data-k=hm]').textContent = s.hm ? '+ capacete' : ''; }
-    if (this.set('mo', s.mo)) q('.money').textContent = '$' + s.mo;
+    if (this.set('ar', s.ar + '|' + s.hm)) { const e = q('[data-s=ar]'); e.querySelector('b').textContent = s.ar; e.querySelector('i').style.width = s.ar + '%'; q('[data-k=hm]').textContent = s.hm ? '+cap' : ''; }
+    if (this.set('mo', s.mo)) q('[data-k=mo]').textContent = '$' + s.mo;
     if (this.set('wn', s.wn)) q('[data-k=wn]').textContent = s.wn;
     if (this.set('mag', s.mag + '|' + s.res + '|' + s.rl)) { q('[data-k=mag]').textContent = s.mag < 0 ? '' : s.mag; q('[data-k=res]').textContent = s.mag < 0 ? '' : '/ ' + s.res + (s.rl ? ' ↻' : ''); }
     if (this.set('sc', s.sc + '|' + s.al)) { q('.tA').firstChild.nodeValue = s.sc[0]; q('.tB').firstChild.nodeValue = s.sc[1]; q('[data-a="0"]').textContent = '●'.repeat(s.al[0]); q('[data-a="1"]').textContent = '●'.repeat(s.al[1]); }

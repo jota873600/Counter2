@@ -4,12 +4,14 @@
  * semi-transparentes e reposicionáveis (modo de edição). Visíveis apenas no modo "Toque".
  */
 import { settings, saveSettings } from './settings';
+import { ICON } from './icons';
 
+// [id, ícone, rótulo, posição padrão (distância da direita/de baixo e tamanho, em px)] — coluna à direita como num FPS mobile
 const BUTTONS = [
-  ['fire', '🔥', 'Atirar', { r: 24, b: 120, s: 96 }], ['aim', '◎', 'Mirar', { r: 140, b: 190, s: 70 }],
-  ['jump', '⤒', 'Pular', { r: 24, b: 240, s: 66 }], ['reload', '↻', 'Recarregar', { r: 130, b: 70, s: 58 }],
-  ['crouch', '⤓', 'Agachar', { r: 210, b: 100, s: 58 }], ['swap', '⇄', 'Trocar', { r: 24, b: 330, s: 54 }],
-  ['grenade', '💣', 'Granada', { r: 90, b: 320, s: 54 }], ['shop', '$', 'Loja', { r: 24, b: 400, s: 50 }], ['medkit', '✚', 'Kit', { r: 150, b: 320, s: 50 }],
+  ['fire', 'fire', 'Atirar', { r: 131, b: 72, s: 62 }], ['aim', 'aim', 'Mirar', { r: 15, b: 268, s: 56 }],
+  ['jump', 'jump', 'Pular', { r: 19, b: 100, s: 56 }], ['reload', 'reload', 'Recarregar', { r: 82, b: 157, s: 54 }],
+  ['crouch', 'crouch', 'Agachar', { r: 15, b: 157, s: 56 }], ['swap', 'swap', 'Trocar', { r: 15, b: 214, s: 56 }],
+  ['grenade', 'grenade', 'Granada', { r: 82, b: 215, s: 54 }], ['shop', 'shop', 'Loja', { r: 82, b: 270, s: 50 }], ['medkit', 'medkit', 'Kit', { r: 78, b: 100, s: 50 }],
 ];
 
 export class TouchControls {
@@ -23,7 +25,7 @@ export class TouchControls {
     this.btns = {};
     for (const [id, icon, label, def] of BUTTONS) {
       const b = document.createElement('div');
-      b.className = 't-btn'; b.dataset.id = id; b.innerHTML = `<span>${icon}</span><small>${label}</small>`;
+      b.className = 't-btn'; b.dataset.id = id; b.innerHTML = `<span class="ic">${ICON[icon] || ''}</span><i class="badge"></i><small>${label}</small>`;
       el.appendChild(b); this.btns[id] = b; this.place(id, def);
       this.bindButton(b, id);
     }
@@ -32,6 +34,12 @@ export class TouchControls {
   place(id, def) {
     const b = this.btns[id], l = settings.touchLayout[id] || def;
     b.style.right = l.r + 'px'; b.style.bottom = l.b + 'px'; b.style.width = b.style.height = l.s + 'px';
+  }
+  /** Contador no canto do botão (ex.: nº de granadas); some e escurece o botão quando é zero. */
+  setBadge(id, n) {
+    const b = this.btns[id]; if (!b) return;
+    if (b._n === n) return; b._n = n;
+    const bd = b.querySelector('.badge'); bd.textContent = n > 0 ? String(n) : ''; bd.style.display = n > 0 ? 'block' : 'none'; b.classList.toggle('empty', !(n > 0));
   }
   setEdit(on) { this.edit = on; this.el.classList.toggle('editing', on); }
   resetLayout() { settings.touchLayout = {}; saveSettings(); for (const [id, , , def] of BUTTONS) this.place(id, def); }

@@ -204,6 +204,37 @@ export class Menus {
   }
 
   /* ---------------- Configurações ---------------- */
+  /** Menu da partida: abre por cima do jogo SEM pausá-lo (a simulação continua rodando). */
+  pause() {
+    const a = this.app;
+    if (a.screen !== 'game' || this.pauseEl) return;
+    a.beforeModal();
+    const o = (this.pauseEl = document.createElement('div')); o.className = 'set ui-block'; this.root.appendChild(o);
+    o.innerHTML = `<div class="box panel pausebox">
+      <h2 style="margin:0 0 4px">Menu</h2>
+      <p class="hint" style="margin:0 0 12px">O jogo não pausa: a partida continua enquanto este menu está aberto.</p>
+      <div class="pcol">
+        <button class="btn ok" data-x="close">▶ Continuar</button>
+        <button class="btn g" data-x="set">⚙ Configurações</button>
+        <button class="btn g" data-x="help">❓ Como jogar</button>
+        <button class="btn g" data-x="fs">⛶ Tela cheia</button>
+        <button class="btn r" data-x="quit">🚪 Sair da partida</button>
+      </div></div>`;
+    const close = () => { if (!this.pauseEl) return; this.pauseEl.remove(); this.pauseEl = null; a.afterModal(); };
+    o.onclick = (e) => { if (e.target === o) close(); };
+    $(o, '[data-x=close]').onclick = close;
+    $(o, '[data-x=set]').onclick = () => this.settings();
+    $(o, '[data-x=help]').onclick = () => { close(); a.hud.showHelp(true); };
+    $(o, '[data-x=fs]').onclick = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch { /* */ } };
+    const q = $(o, '[data-x=quit]'); let armed = 0;
+    q.onclick = () => {
+      if (!armed) { armed = setTimeout(() => { armed = 0; q.textContent = '🚪 Sair da partida'; }, 3000); q.textContent = 'Toque de novo para confirmar'; return; }
+      clearTimeout(armed); this.dropPause(); a.quitMatch();
+    };
+  }
+  /** Remove o menu da partida sem reabrir o bloqueio do mouse (usado ao sair/terminar a partida). */
+  dropPause() { if (this.pauseEl) { this.pauseEl.remove(); this.pauseEl = null; } }
+
   settings() {
     const a = this.app;
     a.beforeModal();
