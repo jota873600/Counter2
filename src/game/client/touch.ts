@@ -4,15 +4,23 @@
  * semi-transparentes e reposicionáveis (modo de edição). Visíveis apenas no modo "Toque".
  */
 import { settings, saveSettings } from './settings';
-import { ICON } from './icons';
+import { ICON, FIRE_FX, FIRE_RING } from './icons';
 
 // [id, ícone, rótulo, posição padrão (distância da direita/de baixo e tamanho, em px)] — coluna à direita como num FPS mobile
-const BUTTONS = [
-  ['fire', 'fire', 'Atirar', { r: 131, b: 72, s: 62 }], ['aim', 'aim', 'Mirar', { r: 15, b: 268, s: 56 }],
+export const TOUCH_BUTTONS = [
+  ['fire', 'fire', 'Atirar', { r: 128, b: 70, s: 70 }], ['aim', 'aim', 'Mirar', { r: 15, b: 268, s: 56 }],
   ['jump', 'jump', 'Pular', { r: 19, b: 100, s: 56 }], ['reload', 'reload', 'Recarregar', { r: 82, b: 157, s: 54 }],
   ['crouch', 'crouch', 'Agachar', { r: 15, b: 157, s: 56 }], ['swap', 'swap', 'Trocar', { r: 15, b: 214, s: 56 }],
   ['grenade', 'grenade', 'Granada', { r: 82, b: 215, s: 54 }], ['shop', 'shop', 'Loja', { r: 82, b: 270, s: 50 }], ['medkit', 'medkit', 'Kit', { r: 78, b: 100, s: 50 }],
 ];
+
+/** Posição/tamanho padrão do joystick (base de repouso: distância da esquerda/de baixo e diâmetro, em px). */
+export const JOY_DEF = { l: 34, b: 83, s: 120 };
+/** Aplica o diâmetro do joystick (a bolinha central acompanha proporcionalmente). */
+export function styleJoy(base, knob, s) {
+  base.style.width = base.style.height = s + 'px';
+  const k = Math.round(s * 0.42); knob.style.width = knob.style.height = k + 'px'; knob.style.left = knob.style.top = Math.round((s - k) / 2) + 'px';
+}
 
 export class TouchControls {
   constructor(root, input, hooks) {
@@ -23,13 +31,20 @@ export class TouchControls {
     root.appendChild(el);
     this.look = el.querySelector('.t-look'); this.joy = el.querySelector('.t-joy'); this.base = el.querySelector('.t-joy-base'); this.knob = el.querySelector('.t-joy-knob');
     this.btns = {};
-    for (const [id, icon, label, def] of BUTTONS) {
+    for (const [id, icon, label, def] of TOUCH_BUTTONS) {
       const b = document.createElement('div');
       b.className = 't-btn'; b.dataset.id = id; b.innerHTML = `<span class="ic">${ICON[icon] || ''}</span><i class="badge"></i><small>${label}</small>`;
+      if (id === 'fire') { b.insertAdjacentHTML('afterbegin', FIRE_FX); b.insertAdjacentHTML('beforeend', FIRE_RING); }
       el.appendChild(b); this.btns[id] = b; this.place(id, def);
       this.bindButton(b, id);
     }
-    this.bindLook(); this.bindJoy();
+    this.bindLook(); this.bindJoy(); this.applyLayout();
+  }
+  /** (Re)aplica as posições/tamanhos salvos de todos os botões e do joystick. */
+  applyLayout() {
+    for (const [id, , , def] of TOUCH_BUTTONS) this.place(id, def);
+    const j = { ...JOY_DEF, ...(settings.touchLayout.joy || {}) }; this.joyRest = j;
+    styleJoy(this.base, this.knob, j.s); this.base.style.left = j.l + 'px'; this.base.style.bottom = j.b + 'px'; this.base.style.top = '';
   }
   place(id, def) {
     const b = this.btns[id], l = settings.touchLayout[id] || def;
@@ -42,7 +57,7 @@ export class TouchControls {
     const bd = b.querySelector('.badge'); bd.textContent = n > 0 ? String(n) : ''; bd.style.display = n > 0 ? 'block' : 'none'; b.classList.toggle('empty', !(n > 0));
   }
   setEdit(on) { this.edit = on; this.el.classList.toggle('editing', on); }
-  resetLayout() { settings.touchLayout = {}; saveSettings(); for (const [id, , , def] of BUTTONS) this.place(id, def); }
+  resetLayout() { settings.touchLayout = {}; saveSettings(); this.applyLayout(); }
 
   bindButton(b, id) {
     const t = this.input.touch;
@@ -81,12 +96,13 @@ export class TouchControls {
 
   bindJoy() {
     let pid = null, ox = 0, oy = 0;
-    const t = this.input.touch, R = 55;
+    const t = this.input.touch; let R = 55, S = 120;
     this.joy.addEventListener('pointerdown', (e) => {
       if (pid !== null) return;
       pid = e.pointerId; this.joy.setPointerCapture(pid); e.preventDefault();
+      S = this.joyRest.s; R = S * 0.46;
       const r = this.joy.getBoundingClientRect(); ox = e.clientX; oy = e.clientY;
-      this.base.style.left = ox - r.left - 60 + 'px'; this.base.style.top = oy - r.top - 60 + 'px'; this.base.classList.add('show');
+      this.base.style.left = ox - r.left - S / 2 + 'px'; this.base.style.top = oy - r.top - S / 2 + 'px'; this.base.style.bottom = 'auto'; this.base.classList.add('show');
     });
     this.joy.addEventListener('pointermove', (e) => {
       if (e.pointerId !== pid) return;
@@ -95,7 +111,7 @@ export class TouchControls {
       this.knob.style.transform = `translate(${dx}px,${dy}px)`;
       t.mx = dx / R; t.my = dy / R;
     });
-    const end = (e) => { if (e.pointerId !== pid) return; pid = null; t.mx = t.my = 0; this.knob.style.transform = ''; this.base.classList.remove('show'); };
+    const end = (e) => { if (e.pointerId !== pid) return; pid = null; t.mx = t.my = 0; this.knob.style.transform = ''; this.base.classList.remove('show'); const j = this.joyRest; this.base.style.left = j.l + 'px'; this.base.style.top = ''; this.base.style.bottom = j.b + 'px'; };
     this.joy.addEventListener('pointerup', end); this.joy.addEventListener('pointercancel', end);
   }
 }

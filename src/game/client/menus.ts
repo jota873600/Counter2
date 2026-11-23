@@ -9,6 +9,7 @@ import { DIFFS } from '../shared/weapons';
 import { $, TEAM } from './ui';
 import { SKINS, clampSkin } from '../shared/skins';
 import { CharPreview } from './preview';
+import { openLayoutEditor } from './layoutEditor';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ST = { online: 'Online', offline: 'Offline', lobby: 'Em sala', match: 'Em partida' };
@@ -216,6 +217,7 @@ export class Menus {
       <div class="pcol">
         <button class="btn ok" data-x="close">▶ Continuar</button>
         <button class="btn g" data-x="set">⚙ Configurações</button>
+        <button class="btn g" data-x="ctl">🎮 Controles de toque</button>
         <button class="btn g" data-x="help">❓ Como jogar</button>
         <button class="btn g" data-x="fs">⛶ Tela cheia</button>
         <button class="btn r" data-x="quit">🚪 Sair da partida</button>
@@ -224,6 +226,7 @@ export class Menus {
     o.onclick = (e) => { if (e.target === o) close(); };
     $(o, '[data-x=close]').onclick = close;
     $(o, '[data-x=set]').onclick = () => this.settings();
+    $(o, '[data-x=ctl]').onclick = () => openLayoutEditor(a);
     $(o, '[data-x=help]').onclick = () => { close(); a.hud.showHelp(true); };
     $(o, '[data-x=fs]').onclick = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch { /* */ } };
     const q = $(o, '[data-x=quit]'); let armed = 0;
@@ -249,7 +252,7 @@ export class Menus {
         <div class="row"><label>Qualidade</label>${this.seg('quality', [['auto', 'Auto'], ['low', 'Baixa'], ['medium', 'Média'], ['high', 'Alta']], settings.quality)}</div>
         <div class="row"><label>Estilo</label>${this.seg('style', [['blocks', 'Blocos'], ['classic', 'Realista']], settings.style)}<small style="color:#6b7a90">vale na próxima partida</small></div>
         <div class="row"><label>Mostrar FPS</label><input type="checkbox" data-c="fps" ${settings.fps ? 'checked' : ''}> <label style="min-width:60px;margin-left:16px">Sangue</label><input type="checkbox" data-c="blood" ${settings.blood ? 'checked' : ''}></div>
-        <div class="row"><label>Botões toque</label><button class="btn g sm" data-x="edit">Editar posições</button><button class="btn g sm" data-x="reset">Restaurar</button></div>
+        <div class="row"><label>Botões toque</label><button class="btn g sm" data-x="edit">🎮 Personalizar controles</button></div>
         <h3 style="margin:14px 0 6px">Teclas (clique para remapear)</h3><div class="kb">${Object.keys(DEFAULT_BINDS).map((k) => `<div><span>${BIND_LABELS[k]}</span><button class="btn g sm" data-b="${k}">${esc(keyLabel(settings.binds[k]))}</button></div>`).join('')}</div>
         <div class="row" style="justify-content:space-between;margin-top:14px"><button class="btn g sm" data-x="defaults">Teclas padrão</button><button class="btn" data-x="close">Fechar</button></div></div>`;
       this.bindSeg(o, (k, v) => { settings[k] = v; saveSettings(); a.applySettings(k); if (k === 'control') a.input.applyMode(); });
@@ -269,9 +272,8 @@ export class Menus {
         };
       }));
       $(o, '[data-x=defaults]').onclick = () => { settings.binds = { ...DEFAULT_BINDS }; saveSettings(); a.input.rebuild(); a.hud.buildKeybar(); render(); };
-      $(o, '[data-x=edit]').onclick = () => { a.touch && a.touch.setEdit(true); a.hud.toast('Arraste os botões na tela de jogo. Feche para sair da edição.'); };
-      $(o, '[data-x=reset]').onclick = () => a.touch && a.touch.resetLayout();
-      $(o, '[data-x=close]').onclick = () => { o.remove(); a.touch && a.touch.setEdit(false); a.afterModal(); };
+      $(o, '[data-x=edit]').onclick = () => openLayoutEditor(a);
+      $(o, '[data-x=close]').onclick = () => { o.remove(); a.afterModal(); };
     };
     render();
   }
