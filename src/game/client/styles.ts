@@ -177,4 +177,31 @@ input,select{background:#161c27;border:1px solid #2c3647;color:#e8edf3;border-ra
 .ce-size{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:rgba(16,21,29,.95);border:1px solid #2c3647;border-radius:12px;padding:8px 14px;z-index:3;max-width:min(520px,60vw)}
 .ce-sel{min-width:0}.ce-sel b{display:block;font-size:14px}.ce-sel small{display:block;font-size:10px;color:#8ea0b7;line-height:1.25}
 .ce-ctl{display:flex;align-items:center;gap:8px}.ce-ctl input[type=range]{width:min(150px,22vw)}.ce-ctl span{font-size:12px;color:#cbd5e1;min-width:44px;text-align:right}
+
+/* ===== Configurações em abas ===== */
+.set.cfgwrap{display:block;background:#0a090d}
+.cfg{display:grid;grid-template-columns:minmax(150px,22%) 1fr;width:100%;height:100%;color:#fff;background:radial-gradient(900px 520px at 75% -10%,rgba(130,64,10,.38),transparent 60%),#0b0a0e}
+.cfg-side{display:flex;flex-direction:column;background:linear-gradient(90deg,#050407,#0d0b10);border-right:1px solid #1a1620;overflow:auto}
+.cfg-title{padding:16px 14px;font-weight:800;font-size:18px;text-transform:uppercase;background:#1b1a1d}
+.cfg-tab{all:unset;box-sizing:border-box;display:block;padding:14px;font-weight:800;font-size:16px;text-transform:uppercase;color:#e8e6ea;cursor:pointer}.cfg-tab.on{background:#ffb800;color:#111}
+.cfg-main{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;padding:16px 18px 12px}
+.cfg-x{position:absolute;top:0;right:0;width:48px;height:40px;border:0;background:#17151b;color:#fff;font-size:20px;cursor:pointer;z-index:2}
+.cfg-panel{flex:1;min-height:0;margin-top:34px;background:rgba(0,0,0,.42);padding:12px 14px;overflow:auto}
+.cfg-h{margin:0 0 10px;font-size:15px;font-weight:800;text-transform:uppercase;border-left:5px solid #ffb800;padding-left:8px;line-height:1.1}
+.cfg-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);padding:10px 14px;margin-bottom:6px;min-height:42px}
+.cfg-l{flex:0 0 34%;font-weight:700;font-size:15px}.cfg-v{flex:none;min-width:50px;text-align:right;font-weight:700;font-size:15px}
+.cfg-ctl{flex:1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cfg-note{color:#9a94a6;font-size:12px}
+.set input.cfg-r{flex:1;min-width:0;width:auto;-webkit-appearance:none;appearance:none;height:6px;border-radius:0;border:0;padding:0;outline:none;background:linear-gradient(90deg,#ffb800 var(--p,50%),#000 var(--p,50%))}
+.cfg-r::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:24px;background:#fff;border:0;border-radius:2px}
+.cfg-r::-moz-range-thumb{width:12px;height:24px;background:#fff;border:0;border-radius:2px}.cfg-r::-moz-range-track{background:transparent}
+.cfg-sw{position:relative;width:52px;height:26px;margin-left:auto;flex:none}.cfg-sw input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:1}
+.cfg-sw i{position:absolute;inset:0;background:#000;border-radius:13px;transition:.15s}.cfg-sw i::after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+.cfg-sw input:checked+i{background:#ffb800}.cfg-sw input:checked+i::after{left:29px;background:#111}
+.cfg .seg{display:flex;gap:4px;flex-wrap:wrap}.cfg .seg button{background:#000;color:#fff;border:0;border-radius:0;padding:8px 14px;font-weight:700;cursor:pointer}.cfg .seg button.on{background:#ffb800;color:#111}
+.cfg .kb{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}.cfg .kb>div{background:rgba(255,255,255,.06);padding:6px 10px;font-size:14px}
+.cfg .kb .btn{background:#000;color:#fff;border:1px solid #2b2b2b;border-radius:0;min-width:90px}
+.cfg-foot{display:flex;justify-content:flex-end;padding-top:10px}
+.cfg-reset,.cfg-btn{border:0;background:#fff;color:#111;font-weight:800;font-size:14px;text-transform:uppercase;padding:10px 28px;cursor:pointer}.cfg-btn{padding:8px 16px;background:#ffb800}
+@media (max-width:640px){.cfg{grid-template-columns:1fr;grid-template-rows:auto 1fr}.cfg-side{flex-direction:row;overflow-x:auto}.cfg-title{display:none}.cfg-tab{white-space:nowrap;padding:12px 14px}.cfg-main{padding:10px}.cfg-panel{margin-top:44px}.cfg-l{flex-basis:40%}}
+@media (max-height:430px){.cfg-title{padding:10px 12px;font-size:15px}.cfg-tab{padding:10px 12px;font-size:14px}.cfg-main{padding:10px 14px 8px}.cfg-panel{margin-top:30px;padding:8px 12px}.cfg-row{padding:6px 12px;min-height:34px;margin-bottom:5px}.cfg-l,.cfg-v{font-size:13px}.cfg-x{height:30px;width:40px}.cfg-reset{padding:8px 22px}}
 `;

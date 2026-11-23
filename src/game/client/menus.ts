@@ -3,7 +3,7 @@
  * Menus: principal (offline/online), amigos (ID/nome, pedidos, convites), lobby de sala
  * (times, pronto, chat, convidar) e configurações (controles, sensibilidade, FOV, volume, qualidade, teclas).
  */
-import { settings, saveSettings, DEFAULT_BINDS, BIND_LABELS, keyLabel } from './settings';
+import { settings, saveSettings, DEFAULT_BINDS, BIND_LABELS, keyLabel, DEFAULTS } from './settings';
 import { THEMES } from '../shared/map';
 import { DIFFS } from '../shared/weapons';
 import { $, TEAM } from './ui';
@@ -238,25 +238,40 @@ export class Menus {
   /** Remove o menu da partida sem reabrir o bloqueio do mouse (usado ao sair/terminar a partida). */
   dropPause() { if (this.pauseEl) { this.pauseEl.remove(); this.pauseEl = null; } }
 
+  /** Configurações em abas (menu lateral à esquerda, opções à direita). */
   settings() {
     const a = this.app;
     a.beforeModal();
-    const o = document.createElement('div'); o.className = 'set ui-block'; this.root.appendChild(o);
+    const o = document.createElement('div'); o.className = 'set cfgwrap ui-block'; this.root.appendChild(o);
+    let tab = Menus.lastTab || 'sens';
+    const FMT = { sens: (v) => (+v).toFixed(2), touchSens: (v) => (+v).toFixed(2), fov: (v) => String(Math.round(v)), volume: (v) => Math.round(v * 100) + '%' };
+    const fmt = (k, v) => (FMT[k] || String)(v);
+    const slider = (k, label, min, max, step) => `<div class="cfg-row"><span class="cfg-l">${label}</span><span class="cfg-v" data-val="${k}">${fmt(k, settings[k])}</span><input class="cfg-r" type="range" min="${min}" max="${max}" step="${step}" value="${settings[k]}" data-r="${k}"></div>`;
+    const toggle = (k, label) => `<div class="cfg-row"><span class="cfg-l">${label}</span><label class="cfg-sw"><input type="checkbox" data-c="${k}" ${settings[k] ? 'checked' : ''}><i></i></label></div>`;
+    const segRow = (k, label, opts, note = '') => `<div class="cfg-row"><span class="cfg-l">${label}</span><div class="cfg-ctl">${this.seg(k, opts, settings[k])}${note}</div></div>`;
+    const TABS = [['sens', 'Sensibilidade'], ['gfx', 'Gráfico'], ['kbm', 'Teclado e mouse'], ['ctl', 'Controles'], ['snd', 'Som']];
+    const panel = () => ({
+      sens: slider('sens', 'Mouse', 0.2, 4, 0.05) + slider('touchSens', 'Toque (arrastar na tela)', 0.3, 3, 0.05),
+      gfx: segRow('quality', 'Qualidade', [['auto', 'Auto'], ['low', 'Baixa'], ['medium', 'Média'], ['high', 'Alta']])
+        + segRow('style', 'Estilo visual', [['blocks', 'Blocos'], ['classic', 'Realista']], '<small class="cfg-note">vale na próxima partida</small>')
+        + slider('fov', 'Campo de visão (FOV)', 60, 110, 1) + toggle('fps', 'Mostrar FPS e ping') + toggle('blood', 'Efeito de sangue'),
+      kbm: `<div class="cfg-note" style="margin-bottom:8px">Clique em uma ação e aperte a nova tecla para remapear.</div><div class="kb">${Object.keys(DEFAULT_BINDS).map((k) => `<div><span>${BIND_LABELS[k]}</span><button class="btn g sm" data-b="${k}">${esc(keyLabel(settings.binds[k]))}</button></div>`).join('')}</div>`,
+      ctl: segRow('control', 'Tipo de controle', [['auto', 'Automático'], ['kbm', 'Teclado e mouse'], ['touch', 'Toque']])
+        + `<div class="cfg-row"><span class="cfg-l">Botões de toque</span><button class="cfg-btn" data-x="edit">🎮 Personalizar</button></div>`,
+      snd: slider('volume', 'Volume geral', 0, 1, 0.02),
+    })[tab];
+    const title = Object.fromEntries(TABS)[tab];
     const render = () => {
-      o.innerHTML = `<div class="box panel"><h2 style="margin:0 0 8px">Configurações</h2>
-        <div class="row"><label>Controles</label>${this.seg('control', [['auto', 'Automático'], ['kbm', 'Teclado e mouse'], ['touch', 'Toque']], settings.control)}</div>
-        <div class="row"><label>Sensibilidade</label><input type="range" min="0.2" max="4" step="0.05" value="${settings.sens}" data-r="sens"><span data-v="sens">${settings.sens}</span></div>
-        <div class="row"><label>Sens. toque</label><input type="range" min="0.3" max="3" step="0.05" value="${settings.touchSens}" data-r="touchSens"><span data-v="touchSens">${settings.touchSens}</span></div>
-        <div class="row"><label>FOV</label><input type="range" min="60" max="110" step="1" value="${settings.fov}" data-r="fov"><span data-v="fov">${settings.fov}</span></div>
-        <div class="row"><label>Volume</label><input type="range" min="0" max="1" step="0.02" value="${settings.volume}" data-r="volume"><span data-v="volume">${Math.round(settings.volume * 100)}%</span></div>
-        <div class="row"><label>Qualidade</label>${this.seg('quality', [['auto', 'Auto'], ['low', 'Baixa'], ['medium', 'Média'], ['high', 'Alta']], settings.quality)}</div>
-        <div class="row"><label>Estilo</label>${this.seg('style', [['blocks', 'Blocos'], ['classic', 'Realista']], settings.style)}<small style="color:#6b7a90">vale na próxima partida</small></div>
-        <div class="row"><label>Mostrar FPS</label><input type="checkbox" data-c="fps" ${settings.fps ? 'checked' : ''}> <label style="min-width:60px;margin-left:16px">Sangue</label><input type="checkbox" data-c="blood" ${settings.blood ? 'checked' : ''}></div>
-        <div class="row"><label>Botões toque</label><button class="btn g sm" data-x="edit">🎮 Personalizar controles</button></div>
-        <h3 style="margin:14px 0 6px">Teclas (clique para remapear)</h3><div class="kb">${Object.keys(DEFAULT_BINDS).map((k) => `<div><span>${BIND_LABELS[k]}</span><button class="btn g sm" data-b="${k}">${esc(keyLabel(settings.binds[k]))}</button></div>`).join('')}</div>
-        <div class="row" style="justify-content:space-between;margin-top:14px"><button class="btn g sm" data-x="defaults">Teclas padrão</button><button class="btn" data-x="close">Fechar</button></div></div>`;
+      Menus.lastTab = tab;
+      o.innerHTML = `<div class="cfg">
+        <aside class="cfg-side"><div class="cfg-title">Configuração</div>${TABS.map(([id, l]) => `<button class="cfg-tab ${id === tab ? 'on' : ''}" data-tab="${id}">${l}</button>`).join('')}</aside>
+        <main class="cfg-main"><button class="cfg-x" data-x="close" title="Fechar">✕</button>
+          <section class="cfg-panel"><h3 class="cfg-h">${Object.fromEntries(TABS)[tab]}</h3>${panel()}</section>
+          <div class="cfg-foot"><button class="cfg-reset" data-x="reset">Reiniciar</button></div></main></div>`;
+      const paint = (r) => r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min)) * 100 + '%');
+      o.querySelectorAll('.cfg-tab').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; render(); }));
       this.bindSeg(o, (k, v) => { settings[k] = v; saveSettings(); a.applySettings(k); if (k === 'control') a.input.applyMode(); });
-      o.querySelectorAll('[data-r]').forEach((r) => (r.oninput = () => { const k = r.dataset.r; settings[k] = +r.value; o.querySelector(`[data-v=${k}]`).textContent = k === 'volume' ? Math.round(r.value * 100) + '%' : r.value; saveSettings(); a.applySettings(k); }));
+      o.querySelectorAll('[data-r]').forEach((r) => { paint(r); r.oninput = () => { const k = r.dataset.r; settings[k] = +r.value; o.querySelector(`[data-val=${k}]`).textContent = fmt(k, r.value); paint(r); saveSettings(); a.applySettings(k); }; });
       o.querySelectorAll('[data-c]').forEach((c) => (c.onchange = () => { settings[c.dataset.c] = c.checked; saveSettings(); }));
       o.querySelectorAll('[data-b]').forEach((b) => (b.onclick = () => {
         b.textContent = 'Pressione uma tecla…';
@@ -271,8 +286,18 @@ export class Menus {
           render(); return true;
         };
       }));
-      $(o, '[data-x=defaults]').onclick = () => { settings.binds = { ...DEFAULT_BINDS }; saveSettings(); a.input.rebuild(); a.hud.buildKeybar(); render(); };
-      $(o, '[data-x=edit]').onclick = () => openLayoutEditor(a);
+      const ed = o.querySelector('[data-x=edit]'); if (ed) ed.onclick = () => openLayoutEditor(a);
+      // Reiniciar: volta ao padrão só as opções da aba aberta
+      $(o, '[data-x=reset]').onclick = () => {
+        const keys = { sens: ['sens', 'touchSens'], gfx: ['quality', 'style', 'fov', 'fps', 'blood'], ctl: ['control'], snd: ['volume'] }[tab] || [];
+        for (const k of keys) settings[k] = DEFAULTS[k];
+        if (tab === 'ctl') settings.touchLayout = {};
+        if (tab === 'kbm') settings.binds = { ...DEFAULT_BINDS };
+        saveSettings(); for (const k of keys) a.applySettings(k);
+        if (tab === 'ctl') { a.input.applyMode(); if (a.touch) a.touch.applyLayout(); }
+        if (tab === 'kbm') { a.input.rebuild(); a.hud.buildKeybar(); }
+        render(); a.hud.toast('Opções restauradas ao padrão');
+      };
       $(o, '[data-x=close]').onclick = () => { o.remove(); a.afterModal(); };
     };
     render();

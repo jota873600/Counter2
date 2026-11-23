@@ -13,6 +13,7 @@ export const BIND_LABELS = {
 
 const KEY = 'bastiao.settings.v1';
 const defaults = { control: 'auto', sens: 1.2, fov: 75, volume: 0.6, quality: 'auto', qv: 2, tlv: 3, fps: false, blood: true, touchSens: 1, touchLayout: {}, helpSeen: false, skin: 0, style: 'blocks', binds: { ...DEFAULT_BINDS } };
+export const DEFAULTS = defaults;
 export const settings = (() => {
   try { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); if (s.qv !== 2) { s.quality = 'auto'; s.qv = 2; } if (s.tlv !== 3) { if (s.tlv === 2 && s.touchLayout) delete s.touchLayout.fire; else s.touchLayout = {}; s.tlv = 3; } /* novo layout dos botões de toque */ /* migra para qualidade automática */ return { ...defaults, ...s, binds: { ...DEFAULT_BINDS, ...(s.binds || {}) } }; } catch { return { ...defaults }; }
 })();
