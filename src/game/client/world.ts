@@ -25,6 +25,10 @@ const GRADE = {
     col+=vec3(0.75,0.02,0.02)*smoothstep(0.25,0.9,d)*uDamage; col=mix(col,vec3(1.0),uFlash); gl_FragColor=vec4(col,c.a); }`,
 };
 
+const isMobile = () => { try { return matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent); } catch { return false; } };
+/** 'auto' vira Média no celular e Alta no PC; o jogo ainda reduz a resolução sozinho se o FPS cair. */
+const resolveQuality = (q) => (q === 'auto' ? (isMobile() ? 'medium' : 'high') : q);
+
 /** Variantes do visual em blocos (cores chapadas, céu claro, névoa leve, luz forte e sombras suaves). */
 const BLOCK_THEMES = {
   day: { sky: [0.3, 0.58, 0.95], horizon: [0.74, 0.88, 0.99], fog: 0xcfe4f6, fogD: 0.007, sun: 0xfff4dc, sunI: 2.7, hemi: [0xd6eaff, 0x9a8466, 0.85], tint: 0xffffff, cl: 0.5 },
@@ -43,7 +47,11 @@ export class Engine {
     const vl = new THREE.DirectionalLight(0xfff0dd, 2.4); vl.position.set(0.4, 1, 0.6); this.vmScene.add(vl);
     this.vmScene.add(this.vmCam);
     this.flashLights = [0, 1].map(() => { const l = new THREE.PointLight(0xffaa55, 0, 25, 2); this.scene.add(l); return { l, t: 0, d: 1, i: 0 }; });
-    this.shake = 0; this.quality = quality;
+    this.shake = 0; this.quality = quality; this.ema = 1 / 60; this.adT = -3; this.direct = false;
+    // Dano/flash no render direto (sem pós-processamento): camadas CSS leves por cima do canvas
+    const mk = (bg) => { const d = document.createElement('div'); d.style.cssText = `position:fixed;inset:0;pointer-events:none;display:none;opacity:0;background:${bg}`; return d; };
+    this.ovD = mk('radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(190,6,6,.95) 100%)'); this.ovF = mk('#fff');
+    if (canvas.parentNode) { canvas.parentNode.insertBefore(this.ovF, canvas.nextSibling); canvas.parentNode.insertBefore(this.ovD, canvas.nextSibling); }
     this.buildComposer();
     this.setQuality(quality);
     this.resize();
@@ -70,17 +78,35 @@ export class Engine {
     const u = this.grade.uniforms; u.uVig.value = b ? 0.12 : 0.38; u.uSat.value = b ? 1.18 : 1.12; u.uCon.value = b ? 1.0 : 1.06;
   }
 
-  setQuality(q) {
-    this.quality = q;
-    const dpr = Math.min(devicePixelRatio || 1, q === 'high' ? 1.75 : 1);
-    this.pixel = q === 'low' ? 0.75 : dpr;
-    this.bloom.enabled = q !== 'low'; this.smaa.enabled = q !== 'low';
+  setQuality(q) { this.quality = q; this.applyTier(resolveQuality(q), false); }
+
+  /** Aplica um nível (low/medium/high). Baixa e Média desenham direto na tela, sem o pipeline de pós-processamento. */
+  applyTier(eff, keepPixel) {
+    this.eff = eff; this.direct = eff !== 'high';
+    this.renderer.autoClear = !this.direct;
+    const dpr = devicePixelRatio || 1;
+    this.pixelMax = eff === 'high' ? Math.min(dpr, 1.5) : eff === 'medium' ? Math.min(dpr, 1) : 0.85;
+    this.pixel = keepPixel ? Math.min(this.pixel || this.pixelMax, this.pixelMax) : this.pixelMax;
+    this.bloom.enabled = eff === 'high'; this.smaa.enabled = eff === 'high';
+    for (const f of this.flashLights) f.l.visible = eff !== 'low';
+    this.ovD.style.display = this.ovF.style.display = this.direct ? 'block' : 'none';
     if (this.sun) {
-      this.sun.castShadow = q !== 'low';
-      const sz = q === 'high' ? 2048 : 1024;
+      this.sun.castShadow = eff !== 'low';
+      const sz = eff === 'high' ? 2048 : 1024;
       if (this.sun.shadow.mapSize.x !== sz) { this.sun.shadow.mapSize.set(sz, sz); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; } }
     }
     this.resize();
+  }
+
+  /** Resolução dinâmica: se o FPS ficar baixo, reduz os pixels (e, no Auto, desliga sombras); sobe de novo se sobrar folga. */
+  adapt(dt) {
+    this.ema += (dt - this.ema) * 0.05;
+    this.adT += dt; if (this.adT < 1.5) return; this.adT = 0;
+    const fps = 1 / this.ema;
+    if (fps < 27) {
+      if (this.pixel > 0.55) { this.pixel = Math.max(0.5, this.pixel - 0.12); this.resize(); this.adT = -1.5; }
+      else if (this.quality === 'auto' && this.eff === 'medium') { this.applyTier('low', true); this.adT = -2; }
+    } else if (fps > 50 && this.pixel < this.pixelMax - 0.01) { this.pixel = Math.min(this.pixelMax, this.pixel + 0.08); this.resize(); this.adT = -1.5; }
   }
 
   resize() {
@@ -93,12 +119,21 @@ export class Engine {
 
   /** Luz pontual temporária (explosões / clarão). */
   pulseLight(pos, color, intensity, dur) {
+    if (this.eff === 'low') return;
     const f = this.flashLights.reduce((a, b) => (a.t < b.t ? a : b));
     f.l.position.set(pos[0], pos[1], pos[2]); f.l.color.set(color); f.i = intensity; f.t = dur; f.d = dur;
   }
   updateLights(dt) { for (const f of this.flashLights) { f.t = Math.max(0, f.t - dt); f.l.intensity = f.i * (f.t / f.d) ** 2; } }
 
-  render(dt) { this.updateLights(dt); this.composer.render(dt); }
+  render(dt) {
+    this.updateLights(dt); this.adapt(dt);
+    if (this.direct) {
+      const r = this.renderer, u = this.grade.uniforms;
+      this.setOv(this.ovD, u.uDamage.value); this.setOv(this.ovF, u.uFlash.value);
+      r.clear(); r.render(this.scene, this.camera); r.clearDepth(); r.render(this.vmScene, this.vmCam);
+    } else this.composer.render(dt);
+  }
+  setOv(el, v) { const q = Math.round(Math.min(1, Math.max(0, v)) * 50) / 50; if (el._q !== q) { el._q = q; el.style.opacity = String(q); } }
 
   /** Monta o céu, a iluminação, a névoa e a geometria do mapa. */
   loadMap(map, themeId) {
@@ -107,6 +142,7 @@ export class Engine {
     const base = THEMES[themeId] || THEMES.day;
     const T = blocks ? { ...base, ...(BLOCK_THEMES[themeId] || BLOCK_THEMES.day) } : base;
     this.theme = T; this.applyStyle(blocks);
+    this.adT = -3;
     const g = (this.mapGroup = new THREE.Group()); this.scene.add(g);
     this.scene.fog = new THREE.FogExp2(T.fog, T.fogD);
     // Céu
@@ -123,7 +159,10 @@ export class Engine {
         vec3 col=mix(hor,top,pow(max(y,0.),0.5));
         float s=max(dot(d,sd),0.); col+=vec3(1.,.85,.6)*(pow(s,800.)*10.+pow(s,14.)*.3);
         if(y>0.02){ vec2 uv=d.xz/(y+0.25)*1.6; float c=smoothstep(.48,.78,fbm(uv+vec2(3.,1.))); col=mix(col,mix(vec3(1.),hor,.25)*(0.75+0.4*s),c*cl*smoothstep(0.02,0.25,y)); }
-        col=mix(col,fogc,1.0-smoothstep(-0.05,0.12,y)); gl_FragColor=vec4(col,1.); }`,
+        col=mix(col,fogc,1.0-smoothstep(-0.05,0.12,y)); gl_FragColor=vec4(col,1.);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
     });
     this.sky = new THREE.Mesh(new THREE.SphereGeometry(400, 32, 16), skyMat); this.sky.renderOrder = -10; this.sky.frustumCulled = false; this.scene.add(this.sky);
     // IBL a partir do céu

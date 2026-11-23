@@ -28,7 +28,7 @@ class Particles {
     this.mat = new THREE.ShaderMaterial({
       uniforms: { map: { value: tex }, scale: { value: 800 } }, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
       vertexShader: 'attribute float size; attribute vec4 color; varying vec4 vC; uniform float scale; void main(){ vC=color; vec4 mv=modelViewMatrix*vec4(position,1.); gl_PointSize=min(size*scale/max(0.1,-mv.z),420.); gl_Position=projectionMatrix*mv; }',
-      fragmentShader: 'uniform sampler2D map; varying vec4 vC; void main(){ float a=texture2D(map,gl_PointCoord).a*vC.a; if(a<0.004) discard; gl_FragColor=vec4(vC.rgb,a); }',
+      fragmentShader: 'uniform sampler2D map; varying vec4 vC; void main(){ float a=texture2D(map,gl_PointCoord).a*vC.a; if(a<0.004) discard; gl_FragColor=vec4(vC.rgb,a);\n#include <colorspace_fragment>\n}',
     });
     this.pts = new THREE.Points(g, this.mat); this.pts.frustumCulled = false; this.pts.renderOrder = additive ? 6 : 5; scene.add(this.pts);
   }

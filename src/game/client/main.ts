@@ -349,7 +349,7 @@ class App {
     try {
       if (this.screen === 'game' && this.transport) { this.transport.update(dt); this.gameFrame(dt); }
       else { this.engine.camera.position.set(0, 20, 0); }
-      this.engine.render(dt);
+      if (this.screen === 'game') this.engine.render(dt); // no menu/lobby o jogo nem é desenhado (economiza GPU)
     } catch (err) { console.error(err); }
     requestAnimationFrame((t) => this.frame(t));
   }

@@ -215,7 +215,7 @@ export class Menus {
         <div class="row"><label>Sens. toque</label><input type="range" min="0.3" max="3" step="0.05" value="${settings.touchSens}" data-r="touchSens"><span data-v="touchSens">${settings.touchSens}</span></div>
         <div class="row"><label>FOV</label><input type="range" min="60" max="110" step="1" value="${settings.fov}" data-r="fov"><span data-v="fov">${settings.fov}</span></div>
         <div class="row"><label>Volume</label><input type="range" min="0" max="1" step="0.02" value="${settings.volume}" data-r="volume"><span data-v="volume">${Math.round(settings.volume * 100)}%</span></div>
-        <div class="row"><label>Qualidade</label>${this.seg('quality', [['low', 'Baixa'], ['medium', 'Média'], ['high', 'Alta']], settings.quality)}</div>
+        <div class="row"><label>Qualidade</label>${this.seg('quality', [['auto', 'Auto'], ['low', 'Baixa'], ['medium', 'Média'], ['high', 'Alta']], settings.quality)}</div>
         <div class="row"><label>Estilo</label>${this.seg('style', [['blocks', 'Blocos'], ['classic', 'Realista']], settings.style)}<small style="color:#6b7a90">vale na próxima partida</small></div>
         <div class="row"><label>Mostrar FPS</label><input type="checkbox" data-c="fps" ${settings.fps ? 'checked' : ''}> <label style="min-width:60px;margin-left:16px">Sangue</label><input type="checkbox" data-c="blood" ${settings.blood ? 'checked' : ''}></div>
         <div class="row"><label>Botões toque</label><button class="btn g sm" data-x="edit">Editar posições</button><button class="btn g sm" data-x="reset">Restaurar</button></div>

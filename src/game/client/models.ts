@@ -144,7 +144,8 @@ const _geo = new Map();
 /** Bloco de cantos arredondados (geometria compartilhada entre todos os bonecos). */
 const rbox = (g, w, h, d, x, y, z, m, r = 0.035) => {
   const k = `${w}|${h}|${d}|${r}`;
-  let ge = _geo.get(k); if (!ge) { ge = new RoundedBoxGeometry(w, h, d, 3, r); _geo.set(k, ge); }
+  // menos segmentos = bem menos triângulos (cabeça mais suave, o resto mais simples)
+  let ge = _geo.get(k); if (!ge) { ge = new RoundedBoxGeometry(w, h, d, r >= 0.08 ? 3 : r >= 0.05 ? 2 : 1, r); _geo.set(k, ge); }
   const o = new THREE.Mesh(ge, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o;
 };
 
