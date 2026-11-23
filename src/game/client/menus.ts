@@ -8,6 +8,7 @@ import { THEMES } from '../shared/map';
 import { DIFFS } from '../shared/weapons';
 import { $, TEAM } from './ui';
 import { SKINS, clampSkin } from '../shared/skins';
+import { CharPreview } from './preview';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ST = { online: 'Online', offline: 'Offline', lobby: 'Em sala', match: 'Em partida' };
@@ -19,12 +20,16 @@ export class Menus {
     this.menu = document.createElement('div'); this.menu.className = 'menu ui-block'; root.appendChild(this.menu);
     this.status = document.createElement('div'); this.status.className = 'status'; root.appendChild(this.status);
     this.setStatus('closed');
+    this.preview = null; this.installEvt = null;
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.installEvt = e; const b = this.menu.querySelector('[data-x=install]'); if (b) b.style.display = ''; });
+    window.addEventListener('appinstalled', () => { this.installEvt = null; const b = this.menu.querySelector('[data-x=install]'); if (b) b.style.display = 'none'; });
   }
+  disposePreview() { if (this.preview) { this.preview.dispose(); this.preview = null; } }
   setStatus(s) {
     this.status.className = 'status ' + (s === 'open' ? 'ok' : 'bad');
-    this.status.textContent = s === 'open' ? `● Servidor online · ping ${this.app.net.ping}ms` : s === 'connecting' ? '○ Conectando ao servidor…' : '● Servidor indisponível — modo offline funciona normalmente';
+    this.status.textContent = s === 'open' ? `● Servidor online · ping ${this.app.net.ping}ms` : s === 'connecting' ? '○ Conectando ao servidor…' : '● Sem servidor (offline funciona)';
   }
-  show(on) { this.menu.style.display = on ? 'block' : 'none'; this.status.style.display = on ? 'block' : 'none'; }
+  show(on) { this.menu.style.display = on ? 'block' : 'none'; this.status.style.display = on ? 'block' : 'none'; if (!on) this.disposePreview(); }
 
   seg(name, opts, val) {
     return `<div class="seg" data-seg="${name}">${opts.map(([v, l]) => `<button data-v="${v}" class="${String(v) === String(val) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
@@ -42,48 +47,93 @@ export class Menus {
       <div class="row"><label>Bots</label>${this.seg('diff', DIFFS.map((d, i) => [i, d.name]), c.diff)}</div>`;
   }
 
-  /* ---------------- Menu principal ---------------- */
+  /* ---------------- Menu principal (lobby) ---------------- */
   main() {
     const a = this.app, id = a.identity;
+    this.disposePreview();
+    this.root.appendChild(this.status); // tira o status do DOM que vai ser recriado
     this.screen = 'main';
-    this.menu.innerHTML = `<div class="wrap">
-      <div class="logo"><h1>BASTIÃO</h1><small>FPS tático · 1v1 a 4v4</small></div>
-      <div>
-        <div class="panel"><h3>Jogar offline contra bots</h3><div data-cfg>${this.cfgControls()}</div>
-          <div class="row"><button class="btn ok" data-x="offline">▶ Jogar contra bots</button></div></div>
-        <div class="panel" style="margin-top:14px"><h3>Multiplayer online</h3>
-          <div class="row"><button class="btn" data-x="create">Criar sala com estas opções</button></div>
-          <div class="row"><label>Código</label><input data-x="code" placeholder="ABC12" maxlength="6" style="width:110px;text-transform:uppercase"><button class="btn g" data-x="join">Entrar na sala</button></div>
-          <p style="color:#8ea0b7;font-size:12px;margin:4px 0 0">Abra outra aba/navegador para testar com um segundo jogador (outro ID).</p></div>
-      </div>
-      <div>
-        <div class="panel"><h3>Seu perfil</h3>
-          <div class="row"><label>Nome</label><input data-x="name" value="${esc(id.name)}" maxlength="16" style="width:170px"></div>
-          <div class="row" style="align-items:flex-start"><label>Skin</label><div><div class="skins" data-x="skins">${SKINS.map((k, i) => `<button class="sk ${i === clampSkin(settings.skin) ? 'on' : ''}" data-sk="${i}" title="${k.name}"><i style="background:#${k.skin.toString(16).padStart(6, '0')}"></i><b></b><u style="background:#${k.legs.toString(16).padStart(6, '0')}"></u></button>`).join('')}</div><small data-x="skname" style="color:#8ea0b7">${SKINS[clampSkin(settings.skin)].name}</small></div></div>
-          <div class="row"><label>Seu ID</label><span class="idchip" data-x="id" title="Clique para copiar">${esc(id.id || '------')}</span></div>
-          <div class="row"><button class="btn g sm" data-x="settings">⚙ Configurações</button><button class="btn g sm" data-x="help">Como jogar (F1)</button></div></div>
-        <div class="panel" style="margin-top:14px"><h3>Amigos</h3>
-          <div class="row"><input data-x="fadd" placeholder="ID ou nome do amigo" style="flex:1"><button class="btn sm" data-x="fbtn">Adicionar</button></div>
-          <div data-friends></div></div>
+    const sk0 = clampSkin(settings.skin), hex = (n) => '#' + n.toString(16).padStart(6, '0');
+    const standalone = window.matchMedia && matchMedia('(display-mode: standalone)').matches;
+    this.menu.innerHTML = `<div class="lbx">
+      <header class="lb-top">
+        <div class="lb-logo"><h1>BASTIÃO</h1><small>FPS TÁTICO</small></div>
+        <div class="lb-top-r"><span data-slot="status"></span>
+          <button class="ib" data-x="install" style="display:none" title="Instalar app">⬇</button>
+          <button class="ib" data-x="fs" title="Tela cheia">⛶</button>
+          <button class="ib" data-x="help" title="Como jogar">?</button>
+          <button class="ib" data-x="settings" title="Configurações">⚙</button></div>
+      </header>
+      <div class="lb-body">
+        <section class="lb-col">
+          <div class="card"><h3>Perfil</h3>
+            <div class="prow"><label>Nome</label><input data-x="name" value="${esc(id.name)}" maxlength="16"></div>
+            <div class="prow"><label>ID</label><span class="idchip" data-x="id" title="Toque para copiar">${esc(id.id || '------')}</span></div></div>
+          <div class="card grow"><h3>Skins <small data-x="skname">${SKINS[sk0].name}</small></h3>
+            <div class="skgrid">${SKINS.map((k, i) => `<button class="skt ${i === sk0 ? 'on' : ''}" data-sk="${i}"><div class="fig"><i style="background:${hex(k.skin)};${k.accColor != null ? `box-shadow:0 -4px 0 ${hex(k.accColor)}` : ''}"></i><b></b><u style="background:${hex(k.legs)}"></u></div><span>${k.name}</span></button>`).join('')}</div></div>
+        </section>
+        <section class="lb-stage">
+          <div class="stage-view" data-x="stage">
+            <button class="arr l" data-x="prev">‹</button><button class="arr r" data-x="next">›</button>
+            <div class="nametag"><b data-x="nm">${esc(id.name)}</b><small data-x="skn">${SKINS[sk0].name}</small></div>
+          </div>
+          <div class="play">
+            <button class="bigplay" data-x="offline"><span>▶ JOGAR</span><small data-x="sum"></small></button>
+            <div class="online"><button class="btn" data-x="create">🌐 Criar sala</button>
+              <input data-x="code" placeholder="CÓDIGO" maxlength="6"><button class="btn g" data-x="join">Entrar</button></div>
+          </div>
+        </section>
+        <section class="lb-col">
+          <div class="tabs"><button class="on" data-tab="match">Partida</button><button data-tab="friends">Amigos <i data-x="badge" style="display:none"></i></button></div>
+          <div class="card grow" data-pane="match"><h3>Configurar partida</h3><div data-cfg>${this.cfgControls()}</div>
+            <p class="hint">Online: crie uma sala e passe o código aos amigos. Vagas vazias viram bots.</p></div>
+          <div class="card grow" data-pane="friends" style="display:none"><h3>Amigos</h3>
+            <div class="prow"><input data-x="fadd" placeholder="ID ou nome do amigo"><button class="btn sm" data-x="fbtn">Adicionar</button></div>
+            <div data-friends></div></div>
+        </section>
       </div></div>`;
     const m = this.menu;
-    this.bindSeg(m, (k, v) => (this.cfg[k] = +v));
-    m.querySelector('[data-f=theme]').onchange = (e) => (this.cfg.theme = e.target.value);
+    $(m, '[data-slot=status]').appendChild(this.status);
+    if (this.installEvt && !standalone) $(m, '[data-x=install]').style.display = '';
+
+    // resumo no botão JOGAR
+    const sum = () => { const c = this.cfg; $(m, '[data-x=sum]').textContent = `contra bots · ${c.mode}v${c.mode} · ${(THEMES[c.theme] || {}).name || ''} · ${DIFFS[c.diff].name}`; };
+    sum();
+    this.bindSeg(m, (k, v) => { this.cfg[k] = +v; sum(); });
+    m.querySelector('[data-f=theme]').onchange = (e) => { this.cfg.theme = e.target.value; sum(); };
     m.querySelector('[data-f=size]').onchange = (e) => (this.cfg.size = +e.target.value);
+
+    // ações
     $(m, '[data-x=offline]').onclick = () => a.startOffline({ ...this.cfg });
     $(m, '[data-x=create]').onclick = () => a.roomCmd({ op: 'create', mode: this.cfg.mode, theme: this.cfg.theme, diff: this.cfg.diff });
-    $(m, '[data-x=join]').onclick = () => { const c = $(m, '[data-x=code]').value.trim(); if (!c) return a.hud.toast('Digite o código da sala', 'e'); a.roomCmd({ op: 'join', code: c }); };
-    $(m, '[data-x=name]').onchange = (e) => a.setName(e.target.value);
-    m.querySelectorAll('[data-sk]').forEach((b) => (b.onclick = () => {
-      const i = +b.dataset.sk; a.setSkin(i);
-      m.querySelectorAll('[data-sk]').forEach((x) => x.classList.toggle('on', x === b));
-      $(m, '[data-x=skname]').textContent = SKINS[i].name;
-    }));
-    $(m, '[data-x=id]').onclick = () => { try { navigator.clipboard.writeText(id.id); a.hud.toast('ID copiado!'); } catch { a.hud.toast('ID: ' + id.id); } };
+    const join = () => { const c = $(m, '[data-x=code]').value.trim(); if (!c) return a.hud.toast('Digite o código da sala', 'e'); a.roomCmd({ op: 'join', code: c }); };
+    $(m, '[data-x=join]').onclick = join; $(m, '[data-x=code]').onkeydown = (e) => { if (e.key === 'Enter') join(); };
+    $(m, '[data-x=name]').onchange = (e) => { a.setName(e.target.value); $(m, '[data-x=nm]').textContent = a.identity.name; };
+    $(m, '[data-x=id]').onclick = () => { try { navigator.clipboard.writeText(a.identity.id); a.hud.toast('ID copiado!'); } catch { a.hud.toast('ID: ' + a.identity.id); } };
     $(m, '[data-x=settings]').onclick = () => this.settings();
     $(m, '[data-x=help]').onclick = () => a.hud.showHelp(true);
+    $(m, '[data-x=fs]').onclick = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch { /* */ } };
+    $(m, '[data-x=install]').onclick = () => { const ev = this.installEvt; if (!ev) return; ev.prompt(); ev.userChoice.finally(() => { this.installEvt = null; $(m, '[data-x=install]').style.display = 'none'; }); };
+
+    // abas Partida / Amigos
+    m.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => {
+      m.querySelectorAll('[data-tab]').forEach((x) => x.classList.toggle('on', x === b));
+      m.querySelectorAll('[data-pane]').forEach((p) => (p.style.display = p.dataset.pane === b.dataset.tab ? '' : 'none'));
+    }));
     const add = () => { const i = $(m, '[data-x=fadd]'); if (i.value.trim()) { a.net.send({ t: 'friend', op: 'add', who: i.value.trim() }); i.value = ''; } };
     $(m, '[data-x=fbtn]').onclick = add; $(m, '[data-x=fadd]').onkeydown = (e) => { if (e.key === 'Enter') add(); };
+
+    // skins + boneco 3D
+    try { this.preview = new CharPreview($(m, '[data-x=stage]')); this.preview.setLook(sk0); this.preview.start(); } catch { this.preview = null; }
+    const pick = (i) => {
+      i = (i + SKINS.length) % SKINS.length; a.setSkin(i);
+      m.querySelectorAll('[data-sk]').forEach((x) => x.classList.toggle('on', +x.dataset.sk === i));
+      $(m, '[data-x=skname]').textContent = SKINS[i].name; $(m, '[data-x=skn]').textContent = SKINS[i].name;
+      if (this.preview) this.preview.setLook(i);
+    };
+    m.querySelectorAll('[data-sk]').forEach((b) => (b.onclick = () => pick(+b.dataset.sk)));
+    $(m, '[data-x=prev]').onclick = () => pick(clampSkin(settings.skin) - 1);
+    $(m, '[data-x=next]').onclick = () => pick(clampSkin(settings.skin) + 1);
     this.friends();
   }
 
@@ -97,6 +147,7 @@ export class Menus {
       ...s.friends.map((f) => `<div class="friend"><i class="dot ${f.st}"></i><span class="n">${esc(f.name)} <small>${f.id}</small></span><small>${ST[f.st]}</small>${inRoom && f.st === 'online' ? `<button class="btn sm" data-a="invite" data-id="${f.id}">Convidar</button>` : ''}<button class="btn g sm" data-a="remove" data-id="${f.id}" title="Remover">✕</button></div>`),
       ...s.out.map((f) => `<div class="friend"><i class="dot"></i><span class="n">${esc(f.name)}</span><small>pedido enviado</small></div>`),
     ].join('') || '<p style="color:#8ea0b7;font-size:13px">Nenhum amigo ainda. Adicione pelo ID ou nome.</p>';
+    const bd = this.menu.querySelector('[data-x=badge]'); if (bd) { bd.textContent = s.inc.length; bd.style.display = s.inc.length ? '' : 'none'; }
     host.querySelectorAll('[data-a]').forEach((b) => (b.onclick = () => {
       const op = b.dataset.a, id = b.dataset.id;
       if (op === 'invite') this.app.roomCmd({ op: 'invite', who: id }); else this.app.net.send({ t: 'friend', op, who: id });
@@ -107,6 +158,7 @@ export class Menus {
   lobby() {
     const a = this.app, r = a.room;
     if (!r) return this.main();
+    if (this.screen !== 'lobby') { this.disposePreview(); this.root.appendChild(this.status); }
     const me = r.players.find((p) => p.id === a.identity.id), host = r.host === a.identity.id;
     if (this.screen !== 'lobby') {
       this.screen = 'lobby';
