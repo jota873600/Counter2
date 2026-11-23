@@ -5,6 +5,7 @@
  * Convenção das armas: origem na empunhadura, cano apontando para -Z, topo +Y.
  */
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const std = (color, rough, metal = 0) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
 export const MAT = {
@@ -135,29 +136,58 @@ function buildGun(id, S, info) {
 /* Personagens                                                          */
 /* ------------------------------------------------------------------ */
 
-/** Personagem low-poly articulado (cor do time). */
+/* Estilo "boneco de blocos": cabeça arredondada com carinha, torso/braços/pernas em blocos de cantos suaves. */
+const _geo = new Map();
+/** Bloco de cantos arredondados (geometria compartilhada entre todos os bonecos). */
+const rbox = (g, w, h, d, x, y, z, m, r = 0.035) => {
+  const k = `${w}|${h}|${d}|${r}`;
+  let ge = _geo.get(k); if (!ge) { ge = new RoundedBoxGeometry(w, h, d, 3, r); _geo.set(k, ge); }
+  const o = new THREE.Mesh(ge, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o;
+};
+let _faceMat = null;
+/** Carinha (olhos + sorriso) desenhada em canvas; criada uma única vez. */
+function faceMaterial() {
+  if (_faceMat) return _faceMat;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = '#0a0a0a';
+  x.beginPath(); x.ellipse(44, 50, 6, 11, 0, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.ellipse(84, 50, 6, 11, 0, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = '#0a0a0a'; x.lineWidth = 6; x.lineCap = 'round';
+  x.beginPath(); x.arc(64, 62, 30, Math.PI * 0.18, Math.PI * 0.82); x.stroke();
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  _faceMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  return _faceMat;
+}
+const SKIN_BLOCK = std(0xc6c9ce, 0.55, 0.02);
+const LEG_BLOCK = std(0x59606c, 0.7, 0.02);
+const SHOE_BLOCK = std(0x2a2e35, 0.7, 0.02);
+
+/** Personagem em blocos articulado (cor do time). Mantém o mesmo contrato de partes/animação de antes. */
 export function buildCharacter(color) {
-  const root = new THREE.Group(), body = teamMat(color), dark = MAT.polymer;
+  const root = new THREE.Group(), body = teamMat(color);
   const hips = new THREE.Group(); hips.position.y = 0.9; root.add(hips);
   const legs = [];
   for (const s of [-1, 1]) {
-    const leg = new THREE.Group(); leg.position.set(s * 0.11, 0, 0); hips.add(leg);
-    box(leg, 0.16, 0.8, 0.18, 0, -0.42, 0, MAT.polymer).material = std(0x2e3440, 0.8);
-    box(leg, 0.17, 0.12, 0.26, 0, -0.84, -0.03, MAT.boot);
+    const leg = new THREE.Group(); leg.position.set(s * 0.12, 0, 0); hips.add(leg);
+    rbox(leg, 0.23, 0.76, 0.24, 0, -0.38, 0, LEG_BLOCK);
+    rbox(leg, 0.25, 0.14, 0.32, 0, -0.83, -0.03, SHOE_BLOCK, 0.05);
     legs.push(leg);
   }
   const upper = new THREE.Group(); hips.add(upper);
-  const torso = box(upper, 0.46, 0.58, 0.26, 0, 0.3, 0, body);
-  const vest = box(upper, 0.48, 0.34, 0.28, 0, 0.35, 0, dark); vest.visible = false;
-  box(upper, 0.5, 0.12, 0.27, 0, 0.02, 0, MAT.dark);
-  const head = new THREE.Group(); head.position.set(0, 0.7, 0); upper.add(head);
-  const hd = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 12), MAT.skin); hd.position.y = 0.1; hd.castShadow = true; head.add(hd);
-  const helm = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.58), body); helm.position.y = 0.115; helm.castShadow = true; helm.visible = false; head.add(helm);
-  box(head, 0.2, 0.05, 0.04, 0, 0.11, -0.105, MAT.visor);
+  const torso = rbox(upper, 0.5, 0.6, 0.28, 0, 0.3, 0, body, 0.05);
+  const vest = rbox(upper, 0.54, 0.36, 0.32, 0, 0.35, 0, MAT.dark, 0.05); vest.visible = false;
+  rbox(upper, 0.52, 0.07, 0.29, 0, 0.03, 0, MAT.dark, 0.03); // cinto
+  const head = new THREE.Group(); head.position.set(0, 0.6, 0); upper.add(head);
+  rbox(head, 0.32, 0.33, 0.32, 0, 0.17, 0, SKIN_BLOCK, 0.09);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.27), faceMaterial());
+  face.position.set(0, 0.17, -0.1625); face.rotation.y = Math.PI; head.add(face);
+  const helm = rbox(head, 0.37, 0.13, 0.37, 0, 0.3, 0, body, 0.06); helm.visible = false;
   const arms = [], hands = [];
   for (const s of [-1, 1]) {
-    const arm = new THREE.Group(); arm.position.set(s * 0.29, 0.54, 0); upper.add(arm);
-    box(arm, 0.1, 0.52, 0.1, 0, -0.26, 0, body); box(arm, 0.09, 0.09, 0.09, 0, -0.56, 0, MAT.glove);
+    const arm = new THREE.Group(); arm.position.set(s * 0.36, 0.55, 0); upper.add(arm);
+    rbox(arm, 0.21, 0.36, 0.22, 0, -0.17, 0, body, 0.045);            // manga (cor do time)
+    rbox(arm, 0.2, 0.22, 0.21, 0, -0.45, 0, SKIN_BLOCK, 0.05);        // antebraço/mão
     arms.push(arm); hands.push(arm);
   }
   // Arma na mão direita
