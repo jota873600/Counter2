@@ -205,5 +205,24 @@ input,select{background:#161c27;border:1px solid #2c3647;color:#e8edf3;border-ra
 .cfg-reset:active,.cfg-btn:active{transform:translateY(2px)}
 @media (max-width:640px){.cfg{grid-template-columns:1fr;grid-template-rows:auto 1fr;width:100vw;height:100vh;border-radius:0;border:0}.cfg-side{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid #243044}.cfg-title{display:none}.cfg-tab{white-space:nowrap}.cfg-l{flex-basis:40%}}
 @media (max-height:430px){.cfg{height:96vh}.cfg-side{padding:8px;gap:4px}.cfg-title{padding:0 2px 6px}.cfg-tab{padding:8px 12px;font-size:13px}.cfg-main{padding:10px 12px 8px}.cfg-row{padding:5px 12px;min-height:34px;margin-bottom:5px}.cfg-l,.cfg-v{font-size:13px}.cfg-x{width:30px;height:30px;top:8px}.cfg-reset{padding:8px 20px}}
-`;
 
+/* botão "Skins" no lobby */
+.skbtn{width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px;background:#121926;border:2px solid #263247;border-radius:12px;color:#e8edf3;cursor:pointer;text-align:left}.skbtn:hover{border-color:#3b82f6;background:#1a2a48}
+.skbtn .fig{display:flex;flex-direction:column;align-items:center;gap:1px;width:34px}.skbtn .fig i{width:17px;height:16px;border-radius:5px;display:block}.skbtn .fig b{width:28px;height:19px;border-radius:3px;background:#3a7bd5;display:block}.skbtn .fig u{width:21px;height:13px;border-radius:2px;display:block}
+.skbtn-t{flex:1;min-width:0}.skbtn-t strong{display:block;font-size:16px}.skbtn-t small{color:#93c5fd;font-size:12px}.skbtn-go{font-size:24px;color:#8ea0b7}
+/* tela de Skins (grande) */
+.set.skwrap{display:flex;align-items:center;justify-content:center;background:rgba(5,8,12,.82)}
+.skw{display:grid;grid-template-columns:minmax(220px,38%) 1fr;width:min(1000px,97vw);height:min(560px,95vh);overflow:hidden;background:rgba(14,19,28,.97);border:1px solid #243044;border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.55);color:#e8edf3}
+.skw-view{position:relative;min-height:0;background:radial-gradient(closest-side,rgba(96,165,250,.22),rgba(0,0,0,0)),linear-gradient(#0e1623,#0a0f18);border-right:1px solid #243044}
+.skw-view canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.skw-name{position:absolute;left:0;right:0;bottom:12px;text-align:center;pointer-events:none;z-index:2}.skw-name b{display:block;font-size:22px;letter-spacing:1px;text-shadow:0 2px 6px #000}.skw-name small{color:#93c5fd;font-size:12px;letter-spacing:2px;text-transform:uppercase}
+.skw-main{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;padding:16px 18px 12px}
+.skw-grid{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;align-content:start;padding:2px}
+.skc{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px 10px;background:#121926;border:2px solid #263247;border-radius:14px;color:#cbd5e1;font-weight:800;font-size:13px;cursor:pointer}
+.skc:hover{border-color:#3b82f6}.skc.sel{border-color:#3b82f6;background:#1a2a48;color:#fff;box-shadow:0 0 18px rgba(59,130,246,.4)}
+.skc .fig{display:flex;flex-direction:column;align-items:center;gap:2px;height:84px;justify-content:center}.skc .fig i{width:30px;height:28px;border-radius:9px;display:block}.skc .fig b{width:46px;height:32px;border-radius:5px;background:#3a7bd5;display:block}.skc .fig u{width:36px;height:22px;border-radius:3px;display:block}
+.skc em{display:none;position:absolute;top:6px;right:6px;font-style:normal;font-size:9px;letter-spacing:1px;background:#16a34a;color:#fff;border-radius:6px;padding:2px 6px}.skc.eq em{display:block}
+.skw-foot{display:flex;justify-content:flex-end;gap:10px;padding-top:12px}
+@media (max-width:640px){.skw{grid-template-columns:1fr;grid-template-rows:38% 1fr;width:100vw;height:100vh;border-radius:0;border:0}.skw-view{border-right:0;border-bottom:1px solid #243044}}
+@media (max-height:430px){.skw{grid-template-columns:minmax(180px,34%) 1fr;height:97vh}.skw-main{padding:10px 12px 8px}.skc{padding:10px 4px 8px}.skc .fig{height:66px}.skc .fig i{width:24px;height:22px}.skc .fig b{width:38px;height:26px}.skc .fig u{width:30px;height:17px}.skw-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}.skw-name b{font-size:18px}}
+`;

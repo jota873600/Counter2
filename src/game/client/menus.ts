@@ -70,12 +70,11 @@ export class Menus {
           <div class="card"><h3>Perfil</h3>
             <div class="prow"><label>Nome</label><input data-x="name" value="${esc(id.name)}" maxlength="16"></div>
             <div class="prow"><label>ID</label><span class="idchip" data-x="id" title="Toque para copiar">${esc(id.id || '------')}</span></div></div>
-          <div class="card grow"><h3>Skins <small data-x="skname">${SKINS[sk0].name}</small></h3>
-            <div class="skgrid">${SKINS.map((k, i) => `<button class="skt ${i === sk0 ? 'on' : ''}" data-sk="${i}"><div class="fig"><i style="background:${hex(k.skin)};${k.accColor != null ? `box-shadow:0 -4px 0 ${hex(k.accColor)}` : ''}"></i><b></b><u style="background:${hex(k.legs)}"></u></div><span>${k.name}</span></button>`).join('')}</div></div>
+          <div class="card"><h3>Visual</h3>
+            <button class="skbtn" data-x="skins"><div class="fig"><i style="background:${hex(SKINS[sk0].skin)};${SKINS[sk0].accColor != null ? `box-shadow:0 -5px 0 ${hex(SKINS[sk0].accColor)}` : ''}"></i><b></b><u style="background:${hex(SKINS[sk0].legs)}"></u></div><div class="skbtn-t"><strong>👕 Skins</strong><small data-x="skname">${SKINS[sk0].name}</small></div><span class="skbtn-go">›</span></button></div>
         </section>
         <section class="lb-stage">
           <div class="stage-view" data-x="stage">
-            <button class="arr l" data-x="prev">‹</button><button class="arr r" data-x="next">›</button>
             <div class="nametag"><b data-x="nm">${esc(id.name)}</b><small data-x="skn">${SKINS[sk0].name}</small></div>
           </div>
           <div class="play">
@@ -124,17 +123,9 @@ export class Menus {
     const add = () => { const i = $(m, '[data-x=fadd]'); if (i.value.trim()) { a.net.send({ t: 'friend', op: 'add', who: i.value.trim() }); i.value = ''; } };
     $(m, '[data-x=fbtn]').onclick = add; $(m, '[data-x=fadd]').onkeydown = (e) => { if (e.key === 'Enter') add(); };
 
-    // skins + boneco 3D
-    try { this.preview = new CharPreview($(m, '[data-x=stage]')); this.preview.setLook(sk0); this.preview.start(); } catch { this.preview = null; }
-    const pick = (i) => {
-      i = (i + SKINS.length) % SKINS.length; a.setSkin(i);
-      m.querySelectorAll('[data-sk]').forEach((x) => x.classList.toggle('on', +x.dataset.sk === i));
-      $(m, '[data-x=skname]').textContent = SKINS[i].name; $(m, '[data-x=skn]').textContent = SKINS[i].name;
-      if (this.preview) this.preview.setLook(i);
-    };
-    m.querySelectorAll('[data-sk]').forEach((b) => (b.onclick = () => pick(+b.dataset.sk)));
-    $(m, '[data-x=prev]').onclick = () => pick(clampSkin(settings.skin) - 1);
-    $(m, '[data-x=next]').onclick = () => pick(clampSkin(settings.skin) + 1);
+    // boneco 3D do lobby + tela de Skins
+    this.initLobbyPreview();
+    $(m, '[data-x=skins]').onclick = () => this.skins();
     this.friends();
   }
 
@@ -205,6 +196,46 @@ export class Menus {
   }
 
   /* ---------------- Configurações ---------------- */
+  initLobbyPreview() {
+    this.disposePreview();
+    const host = this.menu.querySelector('[data-x=stage]'); if (!host) return;
+    try { this.preview = new CharPreview(host); this.preview.setLook(clampSkin(settings.skin)); this.preview.start(); } catch { this.preview = null; }
+  }
+
+  /** Tela de Skins: grade grande + prévia 3D; "Equipar" aplica, "Voltar" descarta. */
+  skins() {
+    const a = this.app, hex = (n) => '#' + n.toString(16).padStart(6, '0');
+    a.beforeModal();
+    this.disposePreview(); // libera o desenho 3D do lobby enquanto esta tela está aberta
+    const o = document.createElement('div'); o.className = 'set skwrap ui-block'; this.root.appendChild(o);
+    let eq = clampSkin(settings.skin), sel = eq;
+    o.innerHTML = `<div class="skw">
+      <div class="skw-view" data-x="view"><div class="skw-name"><b data-x="sn"></b><small data-x="ss"></small></div></div>
+      <div class="skw-main"><button class="cfg-x" data-x="close" title="Fechar">✕</button>
+        <h3 class="cfg-h">Skins</h3>
+        <div class="skw-grid">${SKINS.map((k, i) => `<button class="skc" data-sk="${i}"><div class="fig"><i style="background:${hex(k.skin)};${k.accColor != null ? `box-shadow:0 -6px 0 ${hex(k.accColor)}` : ''}"></i><b></b><u style="background:${hex(k.legs)}"></u></div><span>${k.name}</span><em>EQUIPADA</em></button>`).join('')}</div>
+        <div class="skw-foot"><button class="btn g" data-x="back">← Voltar</button><button class="btn ok" data-x="equip">✔ Equipar</button></div></div></div>`;
+    let pv = null;
+    try { pv = new CharPreview($(o, '[data-x=view]')); pv.start(); } catch { pv = null; }
+    const upd = () => {
+      o.querySelectorAll('[data-sk]').forEach((c) => { const i = +c.dataset.sk; c.classList.toggle('sel', i === sel); c.classList.toggle('eq', i === eq); });
+      $(o, '[data-x=sn]').textContent = SKINS[sel].name; $(o, '[data-x=ss]').textContent = sel === eq ? 'Equipada' : 'Toque em Equipar para usar';
+      const b = $(o, '[data-x=equip]'); b.disabled = sel === eq;
+      if (pv) pv.setLook(sel);
+    };
+    const close = () => {
+      if (pv) pv.dispose();
+      o.remove(); a.afterModal();
+      const t = this.menu.querySelector('[data-x=skname]'); if (t) t.textContent = SKINS[eq].name;
+      const n = this.menu.querySelector('[data-x=skn]'); if (n) n.textContent = SKINS[eq].name;
+      this.initLobbyPreview();
+    };
+    o.querySelectorAll('[data-sk]').forEach((c) => (c.onclick = () => { sel = +c.dataset.sk; upd(); }));
+    $(o, '[data-x=equip]').onclick = () => { a.setSkin(sel); eq = sel; upd(); a.hud.toast('Skin equipada: ' + SKINS[eq].name); };
+    $(o, '[data-x=back]').onclick = close; $(o, '[data-x=close]').onclick = close;
+    upd();
+  }
+
   /** Menu da partida: abre por cima do jogo SEM pausá-lo (a simulação continua rodando). */
   pause() {
     const a = this.app;
