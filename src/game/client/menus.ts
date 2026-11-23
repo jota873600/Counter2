@@ -7,6 +7,7 @@ import { settings, saveSettings, DEFAULT_BINDS, BIND_LABELS, keyLabel } from './
 import { THEMES } from '../shared/map';
 import { DIFFS } from '../shared/weapons';
 import { $, TEAM } from './ui';
+import { SKINS, clampSkin } from '../shared/skins';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ST = { online: 'Online', offline: 'Offline', lobby: 'Em sala', match: 'Em partida' };
@@ -58,6 +59,7 @@ export class Menus {
       <div>
         <div class="panel"><h3>Seu perfil</h3>
           <div class="row"><label>Nome</label><input data-x="name" value="${esc(id.name)}" maxlength="16" style="width:170px"></div>
+          <div class="row" style="align-items:flex-start"><label>Skin</label><div><div class="skins" data-x="skins">${SKINS.map((k, i) => `<button class="sk ${i === clampSkin(settings.skin) ? 'on' : ''}" data-sk="${i}" title="${k.name}"><i style="background:#${k.skin.toString(16).padStart(6, '0')}"></i><b></b><u style="background:#${k.legs.toString(16).padStart(6, '0')}"></u></button>`).join('')}</div><small data-x="skname" style="color:#8ea0b7">${SKINS[clampSkin(settings.skin)].name}</small></div></div>
           <div class="row"><label>Seu ID</label><span class="idchip" data-x="id" title="Clique para copiar">${esc(id.id || '------')}</span></div>
           <div class="row"><button class="btn g sm" data-x="settings">⚙ Configurações</button><button class="btn g sm" data-x="help">Como jogar (F1)</button></div></div>
         <div class="panel" style="margin-top:14px"><h3>Amigos</h3>
@@ -72,6 +74,11 @@ export class Menus {
     $(m, '[data-x=create]').onclick = () => a.roomCmd({ op: 'create', mode: this.cfg.mode, theme: this.cfg.theme, diff: this.cfg.diff });
     $(m, '[data-x=join]').onclick = () => { const c = $(m, '[data-x=code]').value.trim(); if (!c) return a.hud.toast('Digite o código da sala', 'e'); a.roomCmd({ op: 'join', code: c }); };
     $(m, '[data-x=name]').onchange = (e) => a.setName(e.target.value);
+    m.querySelectorAll('[data-sk]').forEach((b) => (b.onclick = () => {
+      const i = +b.dataset.sk; a.setSkin(i);
+      m.querySelectorAll('[data-sk]').forEach((x) => x.classList.toggle('on', x === b));
+      $(m, '[data-x=skname]').textContent = SKINS[i].name;
+    }));
     $(m, '[data-x=id]').onclick = () => { try { navigator.clipboard.writeText(id.id); a.hud.toast('ID copiado!'); } catch { a.hud.toast('ID: ' + id.id); } };
     $(m, '[data-x=settings]').onclick = () => this.settings();
     $(m, '[data-x=help]').onclick = () => a.hud.showHelp(true);

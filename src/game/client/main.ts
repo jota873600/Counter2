@@ -20,6 +20,7 @@ import { getMap } from '../shared/map';
 import { movePlayer, eyeH, losClear } from '../shared/physics';
 import { W, PL } from '../shared/weapons';
 import { CSS } from './styles';
+import { clampSkin } from '../shared/skins';
 
 const R2D = Math.PI / 180, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const TEAM_COL = [0x3a7bd5, 0xe8832a], SLEEVE = [0x3d6fb0, 0xc2702a];
@@ -54,7 +55,7 @@ class App {
     this.social = { friends: [], inc: [], out: [] }; this.room = null; this.dropMeshes = new Map(); this.nadeMeshes = new Map();
     this.last = performance.now(); this.fpsT = 0; this.fpsN = 0; this.fps = 0;
     this.ids = this.identity.id;
-    this.net.connect({ id: this.identity.id, name: this.identity.name });
+    this.net.connect({ id: this.identity.id, name: this.identity.name, skin: clampSkin(settings.skin) });
     addEventListener('keydown', (e) => { if (e.code === 'Escape') this.onEscape(); });
     this.menus.main();
     if (this.input.effectiveMode() === 'kbm' && !settings.helpSeen) this.hud.showHelp(true);
@@ -112,6 +113,7 @@ class App {
 
   /* ---------------- Rede ---------------- */
   roomCmd(o) { if (!this.net.send({ t: 'room', ...o })) this.hud.toast('Sem conexão com o servidor. Tente novamente em instantes.', 'e'); }
+  setSkin(i) { settings.skin = clampSkin(i); saveSettings(); this.net.send({ t: 'skin', skin: settings.skin }); }
   setName(n) { n = n.trim().slice(0, 16); if (!n) return; this.identity.name = n; saveIdentity(this.identity); this.net.send({ t: 'name', name: n }); }
 
   onNet(m) {
@@ -142,7 +144,7 @@ class App {
 
   startOffline(cfg) {
     this.audio.init();
-    const t = new LocalTransport(cfg, this.identity.name, (m) => this.onNet(m));
+    const t = new LocalTransport(cfg, this.identity.name, (m) => this.onNet(m), clampSkin(settings.skin));
     this.beginMatch(t, 'LOCAL', { theme: cfg.theme, limit: t.limit });
   }
 
@@ -437,7 +439,7 @@ class App {
     for (const p of ps) {
       if (p.i === this.myId && p.al) { const c0 = this.chars.get(p.i); if (c0) c0.obj.visible = false; continue; }
       let c = this.chars.get(p.i);
-      if (!c) { const obj = buildCharacter(TEAM_COL[p.t]); sc.add(obj); c = { obj, sh: p.sh, kick: 0, stepD: 0 }; this.chars.set(p.i, c); }
+      if (!c) { const obj = buildCharacter(TEAM_COL[p.t], p.sk); sc.add(obj); c = { obj, sh: p.sh, kick: 0, stepD: 0 }; this.chars.set(p.i, c); }
       c.obj.visible = !(this.spectate === p.i && !this.you.al && this.deadT > 1.6);
       c.obj.position.set(p.x, p.y, p.z);
       if (p.al) setCharWeapon(c.obj, p.cu);

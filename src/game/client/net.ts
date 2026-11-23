@@ -42,13 +42,13 @@ export class NetClient {
 
 /** Transporte offline: executa o Sim localmente a 30 Hz e entrega snapshots sem latência. */
 export class LocalTransport {
-  constructor(cfg, myName, onMsg) {
+  constructor(cfg, myName, onMsg, mySkin = 0) {
     this.id = 'LOCAL'; this.onMsg = onMsg; this.acc = 0; this.ping = 0;
     this.sim = new Sim({ mode: cfg.mode, diff: cfg.diff, theme: cfg.theme, limit: cfg.limit || 0 });
     const names = ['Alfa', 'Bravo', 'Cobra', 'Delta', 'Eco', 'Fênix', 'Gamma', 'Hélix'];
     let b = 0;
     for (let t = 0; t < 2; t++) for (let i = 0; i < cfg.mode; i++) {
-      if (t === 0 && i === 0) this.sim.addPlayer({ id: 'LOCAL', name: myName, team: 0, bot: false });
+      if (t === 0 && i === 0) this.sim.addPlayer({ id: 'LOCAL', name: myName, team: 0, bot: false, skin: mySkin });
       else this.sim.addPlayer({ id: `bot${t}${i}`, name: `Bot ${names[b++ % 8]}`, team: t, bot: true });
     }
     this.sim.start();

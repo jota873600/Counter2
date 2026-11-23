@@ -6,6 +6,7 @@
  */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { SKINS, clampSkin } from '../shared/skins';
 
 const std = (color, rough, metal = 0) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
 export const MAT = {
@@ -136,7 +137,9 @@ function buildGun(id, S, info) {
 /* Personagens                                                          */
 /* ------------------------------------------------------------------ */
 
-/* Estilo "boneco de blocos": cabeça arredondada com carinha, torso/braços/pernas em blocos de cantos suaves. */
+/* Estilo "boneco de blocos". As medidas seguem as caixas de acerto (PARTBOX em physics.ts):
+ * pernas 0–0,85 m · tronco 0,85–1,48 m · cabeça 1,48–1,78 m · braços a 0,24–0,40 m do centro. */
+const HIP_Y = 0.85;
 const _geo = new Map();
 /** Bloco de cantos arredondados (geometria compartilhada entre todos os bonecos). */
 const rbox = (g, w, h, d, x, y, z, m, r = 0.035) => {
@@ -144,57 +147,112 @@ const rbox = (g, w, h, d, x, y, z, m, r = 0.035) => {
   let ge = _geo.get(k); if (!ge) { ge = new RoundedBoxGeometry(w, h, d, 3, r); _geo.set(k, ge); }
   const o = new THREE.Mesh(ge, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o;
 };
-let _faceMat = null;
-/** Carinha (olhos + sorriso) desenhada em canvas; criada uma única vez. */
-function faceMaterial() {
-  if (_faceMat) return _faceMat;
-  const c = document.createElement('canvas'); c.width = c.height = 128;
-  const x = c.getContext('2d');
-  x.fillStyle = '#0a0a0a';
-  x.beginPath(); x.ellipse(44, 50, 6, 11, 0, 0, Math.PI * 2); x.fill();
-  x.beginPath(); x.ellipse(84, 50, 6, 11, 0, 0, Math.PI * 2); x.fill();
-  x.strokeStyle = '#0a0a0a'; x.lineWidth = 6; x.lineCap = 'round';
-  x.beginPath(); x.arc(64, 62, 30, Math.PI * 0.18, Math.PI * 0.82); x.stroke();
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  _faceMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-  return _faceMat;
-}
-const SKIN_BLOCK = std(0xc6c9ce, 0.55, 0.02);
-const LEG_BLOCK = std(0x59606c, 0.7, 0.02);
-const SHOE_BLOCK = std(0x2a2e35, 0.7, 0.02);
 
-/** Personagem em blocos articulado (cor do time). Mantém o mesmo contrato de partes/animação de antes. */
-export function buildCharacter(color) {
+const _faceMats = new Map();
+/** Rostos desenhados em canvas (um material por tipo de rosto). */
+function faceMaterial(type) {
+  let mat = _faceMats.get(type); if (mat) return mat;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d'); x.lineCap = 'round'; x.lineJoin = 'round';
+  const INK = '#0a0a0a';
+  const oval = (cx, cy, rx, ry, col = INK) => { x.fillStyle = col; x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); x.fill(); };
+  const arc = (cx, cy, r, a0, a1, w = 6, col = INK) => { x.strokeStyle = col; x.lineWidth = w; x.beginPath(); x.arc(cx, cy, r, Math.PI * a0, Math.PI * a1); x.stroke(); };
+  const line = (x0, y0, x1, y1, w = 5, col = INK) => { x.strokeStyle = col; x.lineWidth = w; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke(); };
+  const rr = (rx, ry, w, h, r, fill, stroke) => { x.beginPath(); x.moveTo(rx + r, ry); x.arcTo(rx + w, ry, rx + w, ry + h, r); x.arcTo(rx + w, ry + h, rx, ry + h, r); x.arcTo(rx, ry + h, rx, ry, r); x.arcTo(rx, ry, rx + w, ry, r); x.closePath(); if (fill) { x.fillStyle = fill; x.fill(); } if (stroke) { x.strokeStyle = stroke; x.lineWidth = 4; x.stroke(); } };
+  switch (type) {
+    case 'shades':
+      rr(20, 48, 40, 24, 8, INK); rr(68, 48, 40, 24, 8, INK); line(60, 56, 68, 56, 5);
+      line(28, 54, 40, 54, 3, 'rgba(255,255,255,0.55)'); line(76, 54, 88, 54, 3, 'rgba(255,255,255,0.55)');
+      arc(64, 74, 22, 0.2, 0.8, 5); break;
+    case 'ninja':
+      rr(26, 52, 30, 11, 5, '#f4f4f4'); rr(72, 52, 30, 11, 5, '#f4f4f4'); oval(44, 58, 4, 4); oval(86, 58, 4, 4); break;
+    case 'zombie':
+      line(32, 48, 52, 68, 6, '#1f2a14'); line(52, 48, 32, 68, 6, '#1f2a14'); line(76, 48, 96, 68, 6, '#1f2a14'); line(96, 48, 76, 68, 6, '#1f2a14');
+      line(38, 92, 90, 92, 6, '#1f2a14'); for (let i = 0; i < 5; i++) line(46 + i * 10, 86, 46 + i * 10, 98, 4, '#1f2a14'); break;
+    case 'robot':
+      rr(18, 46, 92, 26, 8, '#0c1a2a'); rr(28, 52, 28, 14, 5, '#7dd3fc'); rr(72, 52, 28, 14, 5, '#7dd3fc');
+      for (let i = 0; i < 4; i++) line(46 + i * 13, 88, 46 + i * 13, 100, 5, '#27303c'); break;
+    case 'cat':
+      oval(42, 58, 5, 10); oval(86, 58, 5, 10);
+      x.fillStyle = '#f08aa4'; x.beginPath(); x.moveTo(58, 72); x.lineTo(70, 72); x.lineTo(64, 80); x.closePath(); x.fill();
+      arc(56, 82, 8, 0, 0.95, 4); arc(72, 82, 8, 0.05, 1, 4);
+      line(8, 74, 32, 78, 3); line(8, 88, 32, 84, 3); line(120, 74, 96, 78, 3); line(120, 88, 96, 84, 3); break;
+    case 'ghost':
+      oval(44, 60, 9, 14); oval(84, 60, 9, 14); oval(64, 96, 8, 11); break;
+    case 'grin':
+      line(28, 44, 54, 54, 7); line(100, 44, 74, 54, 7); oval(44, 64, 5, 6); oval(84, 64, 5, 6);
+      rr(32, 80, 64, 24, 7, '#f8f8f8', INK); for (let i = 1; i < 4; i++) line(32 + i * 16, 80, 32 + i * 16, 104, 3); break;
+    default:
+      oval(44, 58, 6, 11); oval(84, 58, 6, 11); arc(64, 66, 28, 0.18, 0.82, 6);
+  }
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  _faceMats.set(type, mat); return mat;
+}
+
+const _skinMats = new Map();
+function skinMaterials(id) {
+  let m = _skinMats.get(id); if (m) return m;
+  const k = SKINS[id];
+  m = {
+    skin: std(k.skin, k.metal ? 0.3 : 0.55, k.metal ? 0.6 : 0.02), legs: std(k.legs, 0.7, 0.02), shoes: std(k.shoes, 0.7, 0.02),
+    acc: k.accColor != null ? std(k.accColor, 0.6, 0.05) : null,
+  };
+  _skinMats.set(id, m); return m;
+}
+
+/** Acessório da skin (boné, faixa, crista, antena, orelhas); some quando o capacete está equipado. */
+function buildAccessory(head, k, mats) {
+  const a = new THREE.Group(); head.add(a);
+  switch (k.acc) {
+    case 'cap': rbox(a, 0.37, 0.12, 0.37, 0, 0.27, 0, mats.acc, 0.05); rbox(a, 0.28, 0.025, 0.14, 0, 0.215, -0.2, mats.acc, 0.012); break;
+    case 'headband': rbox(a, 0.36, 0.045, 0.36, 0, 0.235, 0, mats.acc, 0.02); rbox(a, 0.06, 0.07, 0.05, 0.1, 0.23, 0.19, mats.acc, 0.02); break;
+    case 'mohawk': for (const z of [-0.09, 0, 0.09]) rbox(a, 0.055, 0.1, 0.09, 0, 0.36, z, mats.acc, 0.02); break;
+    case 'antenna': {
+      rbox(a, 0.02, 0.12, 0.02, 0, 0.37, 0, MAT.grey, 0.008);
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), new THREE.MeshBasicMaterial({ color: k.accColor })); ball.position.set(0, 0.46, 0); a.add(ball); break;
+    }
+    case 'ears':
+      for (const s of [-1, 1]) { const e = rbox(a, 0.085, 0.1, 0.05, s * 0.1, 0.355, 0, mats.acc, 0.02); e.rotation.z = -s * 0.3; }
+      break;
+  }
+  return a;
+}
+
+/** Personagem em blocos articulado: cor do time no torso/mangas + skin (cabeça, pernas, rosto, acessório). */
+export function buildCharacter(color, skinId = 0) {
+  const id = clampSkin(skinId), k = SKINS[id], mats = skinMaterials(id);
   const root = new THREE.Group(), body = teamMat(color);
-  const hips = new THREE.Group(); hips.position.y = 0.9; root.add(hips);
+  const hips = new THREE.Group(); hips.position.y = HIP_Y; root.add(hips);
   const legs = [];
   for (const s of [-1, 1]) {
     const leg = new THREE.Group(); leg.position.set(s * 0.12, 0, 0); hips.add(leg);
-    rbox(leg, 0.23, 0.76, 0.24, 0, -0.38, 0, LEG_BLOCK);
-    rbox(leg, 0.25, 0.14, 0.32, 0, -0.83, -0.03, SHOE_BLOCK, 0.05);
+    rbox(leg, 0.22, 0.72, 0.24, 0, -0.36, 0, mats.legs);
+    rbox(leg, 0.24, 0.13, 0.31, 0, -0.785, -0.03, mats.shoes, 0.05);
     legs.push(leg);
   }
   const upper = new THREE.Group(); hips.add(upper);
-  const torso = rbox(upper, 0.5, 0.6, 0.28, 0, 0.3, 0, body, 0.05);
-  const vest = rbox(upper, 0.54, 0.36, 0.32, 0, 0.35, 0, MAT.dark, 0.05); vest.visible = false;
-  rbox(upper, 0.52, 0.07, 0.29, 0, 0.03, 0, MAT.dark, 0.03); // cinto
-  const head = new THREE.Group(); head.position.set(0, 0.6, 0); upper.add(head);
-  rbox(head, 0.32, 0.33, 0.32, 0, 0.17, 0, SKIN_BLOCK, 0.09);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.27), faceMaterial());
-  face.position.set(0, 0.17, -0.1625); face.rotation.y = Math.PI; head.add(face);
-  const helm = rbox(head, 0.37, 0.13, 0.37, 0, 0.3, 0, body, 0.06); helm.visible = false;
+  const torso = rbox(upper, 0.48, 0.63, 0.28, 0, 0.315, 0, body, 0.05);
+  const vest = rbox(upper, 0.52, 0.38, 0.32, 0, 0.36, 0, MAT.dark, 0.05); vest.visible = false;
+  rbox(upper, 0.5, 0.07, 0.29, 0, 0.035, 0, MAT.dark, 0.03); // cinto
+  const head = new THREE.Group(); head.position.set(0, 0.63, 0); upper.add(head);
+  rbox(head, 0.34, 0.31, 0.34, 0, 0.155, 0, mats.skin, 0.085);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.26), faceMaterial(k.face));
+  face.position.set(0, 0.155, -0.172); face.rotation.y = Math.PI; head.add(face);
+  const helm = rbox(head, 0.38, 0.11, 0.38, 0, 0.26, 0, body, 0.05); helm.visible = false;
+  const acc = buildAccessory(head, k, mats);
   const arms = [], hands = [];
   for (const s of [-1, 1]) {
-    const arm = new THREE.Group(); arm.position.set(s * 0.36, 0.55, 0); upper.add(arm);
-    rbox(arm, 0.21, 0.36, 0.22, 0, -0.17, 0, body, 0.045);            // manga (cor do time)
-    rbox(arm, 0.2, 0.22, 0.21, 0, -0.45, 0, SKIN_BLOCK, 0.05);        // antebraço/mão
+    const arm = new THREE.Group(); arm.position.set(s * 0.325, 0.58, 0); upper.add(arm);
+    rbox(arm, 0.15, 0.32, 0.18, 0, -0.15, 0, body, 0.04);            // manga (cor do time)
+    rbox(arm, 0.145, 0.24, 0.17, 0, -0.42, 0, mats.skin, 0.045);     // antebraço/mão
     arms.push(arm); hands.push(arm);
   }
   // Arma na mão direita
-  const mount = new THREE.Group(); arms[1].add(mount); mount.position.set(0, -0.56, -0.02); mount.rotation.x = -Math.PI / 2;
+  const mount = new THREE.Group(); arms[1].add(mount); mount.position.set(0, -0.54, -0.02); mount.rotation.x = -Math.PI / 2;
   const flash = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.35, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xffc060, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
   flash.rotation.x = -Math.PI / 2; flash.visible = false; mount.add(flash);
-  root.userData = { hips, legs, upper, head, arms, mount, torso, helm, vest, flash, weapon: null, weaponId: '', walkT: 0, flashT: 0, deadT: 0 };
+  root.userData = { hips, legs, upper, head, arms, mount, torso, helm, vest, acc, flash, weapon: null, weaponId: '', walkT: 0, flashT: 0, deadT: 0, hipY: HIP_Y };
   return root;
 }
 
@@ -219,9 +277,9 @@ export function animateCharacter(ch, dt, st) {
   const amp = st.grounded ? Math.min(0.9, sp * 0.18) : 0.2;
   u.legs[0].rotation.x = Math.sin(u.walkT) * amp; u.legs[1].rotation.x = -Math.sin(u.walkT) * amp;
   const cr = st.cr;
-  u.hips.position.y = 0.9 - 0.28 * cr;
-  u.legs.forEach((l, i) => { l.scale.y = 1 - 0.18 * cr; l.rotation.x += (i ? -1 : 1) * 0.0 + 0.5 * cr * (i ? 1 : 1); });
-  u.upper.rotation.x = st.pitch * 0.25 + 0.15 * cr + Math.sin(u.walkT) * 0.02;
+  u.hips.position.y = u.hipY - 0.36 * cr;
+  u.legs.forEach((l) => { l.scale.y = 1 - 0.3 * cr; l.rotation.x += 0.6 * cr; });
+  u.upper.rotation.x = st.pitch * 0.25 + 0.25 * cr + Math.sin(u.walkT) * 0.02;
   u.head.rotation.x = st.pitch * 0.7;
   const two = st.kind !== 'knife' && st.kind !== 'nade';
   u.arms[1].rotation.x = 1.35 + st.pitch * 0.6 + (st.kick || 0);
@@ -229,7 +287,7 @@ export function animateCharacter(ch, dt, st) {
   u.arms[0].rotation.z = two ? 0.35 : 0;
   if (!two) u.arms[1].rotation.x = st.kind === 'knife' ? 1.0 + (st.kick || 0) * 2 : 1.2;
   u.flashT = Math.max(0, u.flashT - dt); u.flash.visible = u.flashT > 0;
-  u.helm.visible = !!st.helm; u.vest.visible = !!st.armor;
+  u.helm.visible = !!st.helm; u.vest.visible = !!st.armor; if (u.acc) u.acc.visible = !st.helm;
   if (!st.alive) {
     u.deadT += dt; const e = Math.min(1, u.deadT / 0.55), k = e * e * (3 - 2 * e);
     ch.rotation.order = 'YXZ'; ch.rotation.y = Math.atan2(st.dv[0], st.dv[1]); ch.rotation.x = 1.5 * k; ch.position.y += 0.12 * k;

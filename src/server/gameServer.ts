@@ -12,6 +12,7 @@ import path from 'path';
 import { WebSocketServer } from 'ws';
 import { Sim } from '../game/shared/sim';
 import { TICK } from '../game/shared/weapons';
+import { clampSkin } from '../game/shared/skins';
 
 // DATA_DIR permite apontar para um disco/volume persistente na hospedagem (amigos e IDs ficam salvos ali).
 const DATA = path.join(process.env.DATA_DIR || path.join(process.cwd(), '.data'), 'social.json');
@@ -84,7 +85,7 @@ function joinRoom(conn, r) {
   const cnt = [0, 0];
   for (const m of r.members.values()) cnt[m.team]++;
   const team = cnt[0] <= cnt[1] ? 0 : 1;
-  r.members.set(conn.id, { id: conn.id, name: u.name, team, ready: false, disc: false });
+  r.members.set(conn.id, { id: conn.id, name: u.name, team, ready: false, disc: false, skin: u.skin | 0 });
   u.room = r.code;
   broadcastRoom(r);
   toRoom(r, { t: 'chat', sys: 1, text: `${u.name} entrou na sala` });
@@ -119,7 +120,7 @@ function startMatch(r) {
   const sim = new Sim({ mode: r.mode, diff: r.diff, theme: r.theme, limit: r.size === 'auto' ? 0 : r.size });
   let b = 0;
   for (let t = 0; t < 2; t++) {
-    for (const m of cnt[t]) sim.addPlayer({ id: m.id, name: m.name, team: t, bot: false });
+    for (const m of cnt[t]) sim.addPlayer({ id: m.id, name: m.name, team: t, bot: false, skin: m.skin });
     for (let i = cnt[t].length; i < r.mode; i++) sim.addPlayer({ id: `bot${t}${i}`, name: `Bot ${BOTNAMES[b++ % BOTNAMES.length]}`, team: t, bot: true });
   }
   sim.start();
@@ -168,6 +169,11 @@ function onMessage(conn, raw) {
       if (nm) { u.name = nm; save(); notifyFriends(conn.id); sendSocial(conn.id); if (r) broadcastRoom(r); }
       break;
     }
+    case 'skin': {
+      u.skin = clampSkin(m.skin);
+      const mem = r && r.members.get(u.id); if (mem) mem.skin = u.skin;
+      break;
+    }
     case 'friend': return friendOp(conn, u, m);
     case 'room': return roomOp(conn, u, r, m);
     case 'chat': {
@@ -189,6 +195,7 @@ function hello(conn, m) {
   const nm = String(m.name || '').trim().slice(0, 16) || 'Jogador';
   if (!u) { u = { id, name: nm, friends: new Set(), inc: new Set(), out: new Set(), room: null }; users.set(id, u); }
   else u.name = nm;
+  u.skin = clampSkin(m.skin);
   const old = conns.get(id);
   if (old && old !== conn) { try { old.ws.close(4000, 'Conectado em outro lugar'); } catch { /* */ } }
   conn.id = id; conns.set(id, conn);
@@ -258,7 +265,7 @@ function roomOp(conn, u, r, m) {
       const mode = Math.max(1, Math.min(4, m.mode | 0 || 2));
       const nr = { code, mode, theme: m.theme === 'dusk' ? 'dusk' : 'day', diff: Math.max(0, Math.min(2, m.diff ?? 1)), size: 'auto', host: u.id, state: 'lobby', members: new Map(), sim: null, timer: null };
       rooms.set(code, nr);
-      nr.members.set(u.id, { id: u.id, name: u.name, team: 0, ready: true, disc: false });
+      nr.members.set(u.id, { id: u.id, name: u.name, team: 0, ready: true, disc: false, skin: u.skin | 0 });
       u.room = code;
       broadcastRoom(nr);
       break;

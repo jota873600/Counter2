@@ -7,6 +7,7 @@ import { W, ITEMS, PL, ECON, PARTS, GREN_MAX, recoilKick, dmgFalloff, viewAngles
 import { getMap } from './map';
 import { movePlayer, rayBoxes, rayN, bodyHit, groundAt, eyeH, bodyH, dirFromAngles } from './physics';
 import { botThink, botBuy } from './bots';
+import { clampSkin, skinFromId } from './skins';
 
 const R = Math.PI / 180;
 const n2 = (v) => Math.round(v * 100) / 100;
@@ -16,6 +17,7 @@ const AUTO_SIZE = { 1: 24, 2: 32, 3: 32, 4: 40 };
 class Player {
   constructor(o) {
     this.id = o.id; this.name = o.name; this.team = o.team; this.bot = !!o.bot;
+    this.skin = o.skin == null ? skinFromId(o.id) : clampSkin(o.skin);
     this.ping = 0; this.kills = 0; this.deaths = 0; this.assists = 0; this.dmg = 0; this.money = ECON.START;
     this.q = []; this.budget = 0.1; this.ack = 0; this.clock = 0; this.sh = 0;
     this.x = 0; this.y = 0; this.z = 0; this.vx = 0; this.vy = 0; this.vz = 0; this.yaw = 0; this.pitch = 0; this.cr = 0; this.g = true; this.speed = 0;
@@ -505,7 +507,7 @@ export class Sim {
       ps.push({ i: p.id, n: p.name, t: p.team, x: n2(p.x), y: n2(p.y), z: n2(p.z), yw: n2(p.yaw), pt: n2(p.pitch), cr: n2(p.cr),
         hp: Math.max(0, Math.round(p.hp)), al: p.alive ? 1 : 0, cu: p.alive ? p.curId() : '', sp: n2(p.speed || 0), g: p.g ? 1 : 0, sl: p.walk ? 1 : 0,
         hm: p.helm ? 1 : 0, ar: p.armor > 0 ? 1 : 0, b: p.bot ? 1 : 0, k: p.kills, d: p.deaths, as: p.assists, dm: p.dmg, mo: p.money, pg: p.ping | 0,
-        sh: p.sh, rl: p.rlEnd ? 1 : 0, md: p.med ? 1 : 0, dv: p.dv });
+        sh: p.sh, rl: p.rlEnd ? 1 : 0, md: p.med ? 1 : 0, dv: p.dv, sk: p.skin });
     }
     const w = { tm: n2(this.time), ph: this.phase, rem: n2(Math.max(0, this.phaseEnd - this.time)), rd: this.round, sc: this.score, sd: this.sideOf, win: this.winner, lim: this.limit,
       ps, gr: this.grenades.map((g) => ({ i: g.id, ty: g.ty, x: n2(g.x), y: n2(g.y), z: n2(g.z) })), sm: this.smokes.map((s) => [n2(s.x), n2(s.y), n2(s.z), n2(s.end - this.time)]),
