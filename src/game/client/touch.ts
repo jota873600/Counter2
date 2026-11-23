@@ -61,24 +61,24 @@ export class TouchControls {
 
   bindButton(b, id) {
     const t = this.input.touch;
-    let drag = null;
+    let last = null; // posição anterior do dedo (usada pelo botão de atirar para girar a mira)
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation();
       b.setPointerCapture(e.pointerId);
-      if (this.edit) { drag = { x: e.clientX, y: e.clientY, r: parseFloat(b.style.right), b: parseFloat(b.style.bottom) }; return; }
       b.classList.add('on');
-      if (id === 'fire') t.fire = true;
+      if (id === 'fire') { t.fire = true; last = { x: e.clientX, y: e.clientY }; }
       else if (id === 'aim') t.aim = !t.aim, b.classList.toggle('on', t.aim);
       else if (id === 'crouch') { t.crouch = !t.crouch; b.classList.toggle('on', t.crouch); }
       else if (id === 'jump') this.hooks.onAction('jumpTap');
       else this.hooks.onAction({ reload: 'reload', swap: 'prev', grenade: 'grenade', shop: 'shop', medkit: 'medkit' }[id]);
     });
+    // Atirar + arrastar o MESMO dedo: gira a câmera enquanto o tiro continua (mesma sensibilidade da área de olhar)
     b.addEventListener('pointermove', (e) => {
-      if (!drag) return;
-      b.style.right = Math.max(0, drag.r - (e.clientX - drag.x)) + 'px'; b.style.bottom = Math.max(0, drag.b - (e.clientY - drag.y)) + 'px';
+      if (id !== 'fire' || !last) return;
+      t.lx += e.clientX - last.x; t.ly += e.clientY - last.y; last.x = e.clientX; last.y = e.clientY;
     });
     const up = () => {
-      if (drag) { settings.touchLayout[id] = { r: parseFloat(b.style.right), b: parseFloat(b.style.bottom), s: parseFloat(b.style.width) }; saveSettings(); drag = null; return; }
+      last = null;
       if (id === 'fire') t.fire = false;
       if (id !== 'aim' && id !== 'crouch') b.classList.remove('on');
     };
