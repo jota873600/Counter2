@@ -40,6 +40,7 @@ class App {
     this.audio = new GameAudio(); this.audio.setVolume(settings.volume);
     this.identity = loadIdentity();
     if (!this.identity.name) { this.identity.name = 'Jogador' + Math.floor(Math.random() * 900 + 100); saveIdentity(this.identity); }
+    document.body.classList.toggle('style-blocks', settings.style !== 'classic');
     this.engine = new Engine(this.canvas, settings.quality);
     this.fx = new FX(this.engine.scene, this.engine);
     this.vm = new ViewModel(this.engine.vmScene, this.engine.vmCam, (n) => this.audio.play(n));
@@ -74,6 +75,7 @@ class App {
   applySettings(k) {
     if (k === 'quality') this.engine.setQuality(settings.quality);
     if (k === 'volume') this.audio.setVolume(settings.volume);
+    if (k === 'style') document.body.classList.toggle('style-blocks', settings.style !== 'classic');
   }
   onMode(m) {
     this.hud.buildKeybar();

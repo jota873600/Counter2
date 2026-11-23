@@ -12,7 +12,7 @@ export const BIND_LABELS = {
 };
 
 const KEY = 'bastiao.settings.v1';
-const defaults = { control: 'auto', sens: 1.2, fov: 75, volume: 0.6, quality: 'high', fps: false, blood: true, touchSens: 1, touchLayout: {}, helpSeen: false, skin: 0, binds: { ...DEFAULT_BINDS } };
+const defaults = { control: 'auto', sens: 1.2, fov: 75, volume: 0.6, quality: 'high', fps: false, blood: true, touchSens: 1, touchLayout: {}, helpSeen: false, skin: 0, style: 'blocks', binds: { ...DEFAULT_BINDS } };
 export const settings = (() => {
   try { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); return { ...defaults, ...s, binds: { ...DEFAULT_BINDS, ...(s.binds || {}) } }; } catch { return { ...defaults }; }
 })();

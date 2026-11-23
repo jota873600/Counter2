@@ -133,4 +133,13 @@ input,select{background:#161c27;border:1px solid #2c3647;color:#e8edf3;border-ra
 .lbx .row{margin:7px 0}.lbx .row label{min-width:50px}.lbx .seg button{padding:6px 11px}.lbx select{max-width:100%}.lbx .hint{color:#6b7a90;font-size:11px;margin:10px 0 0}
 @media (max-height:430px){.lb-top{min-height:40px;padding:4px 10px}.lb-logo h1{font-size:20px}.lb-logo small{display:none}.ib{width:30px;height:30px}.lb-body{padding:8px;gap:8px}.lbx .card{padding:8px 10px}.bigplay{padding:6px 12px}}
 @media (orientation:portrait) and (max-width:820px){.lbx{height:auto;min-height:100%}.lb-body{grid-template-columns:1fr}.lb-stage{order:-1}.stage-view{min-height:340px}.lb-col{overflow:visible}.lbx .card.grow{overflow:visible}}
+
+/* HUD no estilo blocos */
+.style-blocks .hp-box,.style-blocks .ammo-box{background:rgba(18,22,30,.78);padding:8px 14px;border-radius:6px;box-shadow:0 3px 0 rgba(0,0,0,.35);text-shadow:none}
+.style-blocks .stat{min-width:104px}.style-blocks .stat b{font-size:30px;letter-spacing:0}
+.style-blocks .bar{height:12px;background:rgba(0,0,0,.45);border-radius:2px;margin-top:4px}
+.style-blocks .bar i{border-radius:0;background:repeating-linear-gradient(90deg,#7ddc4a 0 14px,transparent 14px 18px)}
+.style-blocks .bar.ar i{background:repeating-linear-gradient(90deg,#60a5fa 0 14px,transparent 14px 18px)}
+.style-blocks .low .bar i{background:repeating-linear-gradient(90deg,#ef4444 0 14px,transparent 14px 18px)}
+.style-blocks .ammo-box b{font-size:34px}.style-blocks .money{font-size:20px;background:rgba(18,22,30,.78);padding:4px 10px;border-radius:6px;text-shadow:none}
 `;

@@ -13,6 +13,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { THEMES } from '../shared/map';
 import { topAt } from '../shared/physics';
+import { settings } from './settings';
 
 const GRADE = {
   uniforms: { tDiffuse: { value: null }, uVig: { value: 0.38 }, uSat: { value: 1.12 }, uCon: { value: 1.06 }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uDamage: { value: 0 }, uFlash: { value: 0 } },
@@ -22,6 +23,12 @@ const GRADE = {
     float l=dot(col,vec3(0.299,0.587,0.114)); col=mix(vec3(l),col,uSat); col=(col-0.5)*uCon+0.5;
     vec2 q=vUv-0.5; float d=length(q*vec2(1.15,1.0)); col*=1.0-uVig*smoothstep(0.35,0.95,d);
     col+=vec3(0.75,0.02,0.02)*smoothstep(0.25,0.9,d)*uDamage; col=mix(col,vec3(1.0),uFlash); gl_FragColor=vec4(col,c.a); }`,
+};
+
+/** Variantes do visual em blocos (cores chapadas, céu claro, névoa leve, luz forte e sombras suaves). */
+const BLOCK_THEMES = {
+  day: { sky: [0.3, 0.58, 0.95], horizon: [0.74, 0.88, 0.99], fog: 0xcfe4f6, fogD: 0.007, sun: 0xfff4dc, sunI: 2.7, hemi: [0xd6eaff, 0x9a8466, 0.85], tint: 0xffffff, cl: 0.5 },
+  dusk: { sky: [0.2, 0.2, 0.55], horizon: [1.0, 0.62, 0.38], fog: 0x9a6a70, fogD: 0.01, sun: 0xffa860, sunI: 2.4, hemi: [0xa08cd8, 0x5a4040, 0.7], tint: 0xfff0e0, cl: 0.5 },
 };
 
 export class Engine {
@@ -53,6 +60,14 @@ export class Engine {
     this.grade = new ShaderPass(GRADE); c.addPass(this.grade);
     c.addPass(new OutputPass());
     this.smaa = new SMAAPass(); c.addPass(this.smaa);
+  }
+
+  /** Ajusta tom/bloom/vinheta/saturação para o estilo escolhido (blocos × realista). */
+  applyStyle(b) {
+    const r = this.renderer;
+    r.toneMapping = b ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
+    this.bloom.strength = b ? 0.08 : 0.22;
+    const u = this.grade.uniforms; u.uVig.value = b ? 0.12 : 0.38; u.uSat.value = b ? 1.18 : 1.12; u.uCon.value = b ? 1.0 : 1.06;
   }
 
   setQuality(q) {
@@ -88,24 +103,26 @@ export class Engine {
   /** Monta o céu, a iluminação, a névoa e a geometria do mapa. */
   loadMap(map, themeId) {
     if (this.mapGroup) { this.scene.remove(this.mapGroup); this.mapGroup.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
-    const T = THEMES[themeId] || THEMES.day;
-    this.theme = T;
+    const blocks = settings.style !== 'classic';
+    const base = THEMES[themeId] || THEMES.day;
+    const T = blocks ? { ...base, ...(BLOCK_THEMES[themeId] || BLOCK_THEMES.day) } : base;
+    this.theme = T; this.applyStyle(blocks);
     const g = (this.mapGroup = new THREE.Group()); this.scene.add(g);
     this.scene.fog = new THREE.FogExp2(T.fog, T.fogD);
     // Céu
     if (this.sky) this.scene.remove(this.sky);
     const skyMat = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
-      uniforms: { top: { value: new THREE.Vector3(...T.sky) }, hor: { value: new THREE.Vector3(...T.horizon) }, sd: { value: new THREE.Vector3(...T.sunDir).normalize() }, fogc: { value: new THREE.Color(T.fog) } },
+      uniforms: { cl: { value: T.cl ?? 0.8 }, top: { value: new THREE.Vector3(...T.sky) }, hor: { value: new THREE.Vector3(...T.horizon) }, sd: { value: new THREE.Vector3(...T.sunDir).normalize() }, fogc: { value: new THREE.Color(T.fog) } },
       vertexShader: 'varying vec3 vD; void main(){ vD=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-      fragmentShader: `uniform vec3 top,hor,sd,fogc; varying vec3 vD;
+      fragmentShader: `uniform vec3 top,hor,sd,fogc; uniform float cl; varying vec3 vD;
       float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
       float n(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f); return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y); }
       float fbm(vec2 p){ float a=.5,s=0.; for(int i=0;i<5;i++){ s+=a*n(p); p*=2.1; a*=.5; } return s; }
       void main(){ vec3 d=normalize(vD); float y=d.y;
         vec3 col=mix(hor,top,pow(max(y,0.),0.5));
         float s=max(dot(d,sd),0.); col+=vec3(1.,.85,.6)*(pow(s,800.)*10.+pow(s,14.)*.3);
-        if(y>0.02){ vec2 uv=d.xz/(y+0.25)*1.6; float c=smoothstep(.48,.78,fbm(uv+vec2(3.,1.))); col=mix(col,mix(vec3(1.),hor,.25)*(0.75+0.4*s),c*.8*smoothstep(0.02,0.25,y)); }
+        if(y>0.02){ vec2 uv=d.xz/(y+0.25)*1.6; float c=smoothstep(.48,.78,fbm(uv+vec2(3.,1.))); col=mix(col,mix(vec3(1.),hor,.25)*(0.75+0.4*s),c*cl*smoothstep(0.02,0.25,y)); }
         col=mix(col,fogc,1.0-smoothstep(-0.05,0.12,y)); gl_FragColor=vec4(col,1.); }`,
     });
     this.sky = new THREE.Mesh(new THREE.SphereGeometry(400, 32, 16), skyMat); this.sky.renderOrder = -10; this.sky.frustumCulled = false; this.scene.add(this.sky);
@@ -133,7 +150,7 @@ export class Engine {
     }
     const tint = new THREE.Color(T.tint);
     for (const [m, geos] of Object.entries(groups)) {
-      mats[m] = pbrMat(m, aniso, tint);
+      mats[m] = blocks ? blockMat(m, aniso, tint) : pbrMat(m, aniso, tint);
       const mesh = new THREE.Mesh(mergeGeometries(geos), mats[m]); mesh.castShadow = m !== 'floor'; mesh.receiveShadow = true; g.add(mesh);
     }
     // Marcas de objetivo: letras A/B pintadas no chão + anel luminoso
@@ -150,8 +167,8 @@ export class Engine {
     const lampM = new THREE.MeshBasicMaterial({ color: 0xfff2c0 });
     for (const [x, z] of [[-24, -26], [24, -26], [-24, 26], [24, 26], [0, -14], [0, 14]]) {
       if (Math.abs(z) > map.limit - 2) continue;
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 4.5, 8), new THREE.MeshStandardMaterial({ color: 0x30343a, roughness: 0.6, metalness: 0.7 })); pole.position.set(x, 2.25, z); pole.castShadow = true;
-      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), lampM); lamp.position.set(x, 4.6, z); g.add(pole, lamp);
+      const pole = new THREE.Mesh(blocks ? new THREE.BoxGeometry(0.16, 4.5, 0.16) : new THREE.CylinderGeometry(0.07, 0.09, 4.5, 8), new THREE.MeshStandardMaterial({ color: 0x30343a, roughness: 0.6, metalness: 0.7 })); pole.position.set(x, 2.25, z); pole.castShadow = true;
+      const lamp = new THREE.Mesh(blocks ? new THREE.BoxGeometry(0.4, 0.4, 0.4) : new THREE.SphereGeometry(0.22, 12, 8), lampM); lamp.position.set(x, 4.6, z); g.add(pole, lamp);
     }
   }
 }
@@ -245,4 +262,48 @@ function pbrMat(kind, aniso, tint) {
   const k = kind;
   const t = texCache[k] || (texCache[k] = makeTex(k, aniso));
   return new THREE.MeshStandardMaterial({ map: t.map, bumpMap: t.bump, bumpScale: 1.2, roughness: t.rough, metalness: t.metal, color: tint });
+}
+
+/* -------- Estilo "blocos": texturas de cor chapada, pixels nítidos, sem relevo -------- */
+const clamp8 = (v) => Math.max(0, Math.min(255, v | 0));
+const shade = (c, d) => `rgb(${clamp8(c[0] + d)},${clamp8(c[1] + d)},${clamp8(c[2] + d)})`;
+function makeBlockTex(kind, aniso) {
+  const S = 64, cv = document.createElement('canvas'); cv.width = cv.height = S; const x = cv.getContext('2d');
+  const R = (a, b) => (a + Math.random() * (b - a)) | 0;
+  const rect = (c, d, px, py, w, h) => { x.fillStyle = shade(c, d); x.fillRect(px, py, w, h); };
+  let rough = 1, metal = 0;
+  if (kind === 'wall') { // paredes: faixas horizontais de concreto
+    const c = [150, 158, 163]; rect(c, 0, 0, 0, S, S);
+    for (let i = 0; i < 4; i++) { rect(c, i % 2 ? -12 : 8, 0, i * 16, S, 14); rect(c, -34, 0, i * 16 + 14, S, 2); }
+    for (let i = 0; i < 5; i++) rect(c, R(-16, 12), R(0, 48), R(0, 56), R(8, 20), R(4, 8));
+  } else if (kind === 'conc') { // blocos de concreto claro
+    const c = [180, 185, 189]; rect(c, 0, 0, 0, S, S);
+    for (let i = 0; i < 7; i++) rect(c, R(-14, 12), R(0, 48), R(0, 48), R(10, 24), R(8, 20));
+    rect(c, -26, 0, S - 2, S, 2); rect(c, -26, S - 2, 0, 2, S);
+  } else if (kind === 'crate') { // caixote de madeira
+    const c = [196, 142, 84], f = [138, 90, 44]; rect(c, 0, 0, 0, S, S);
+    for (let i = 0; i < 4; i++) { rect(c, i % 2 ? -10 : 6, 0, i * 16, S, 15); rect(c, -50, 0, i * 16 + 15, S, 1); }
+    rect(f, 0, 0, 0, S, 5); rect(f, 0, 0, S - 5, S, 5); rect(f, 0, 0, 0, 5, S); rect(f, 0, S - 5, 0, 5, S);
+    x.strokeStyle = shade(f, 6); x.lineWidth = 5; x.beginPath(); x.moveTo(5, 5); x.lineTo(S - 5, S - 5); x.stroke();
+  } else if (kind === 'metal') { // painéis azul-acinzentados com rebites
+    const c = [122, 138, 160]; rect(c, 0, 0, 0, S, S);
+    for (let i = 0; i < 2; i++) { rect(c, 10, 0, i * 32, S, 2); rect(c, -30, 0, i * 32 + 30, S, 2); }
+    for (const [px, py] of [[4, 4], [S - 6, 4], [4, S - 6], [S - 6, S - 6]]) rect(c, -45, px, py, 2, 2);
+    rough = 0.6; metal = 0.15;
+  } else if (kind === 'floor') { // terra avermelhada com placas mais claras
+    const c = [166, 98, 62]; rect(c, 0, 0, 0, S, S);
+    for (let i = 0; i < 6; i++) { const w = R(10, 26), h = R(8, 18); rect(c, R(-22, 18), R(0, S - w), R(0, S - h), w, h); }
+    for (let i = 0; i < 10; i++) rect(c, 16, R(0, S - 2), R(0, S - 2), 2, 2);
+  } else { // siteA / siteB: ladrilhos azuis ou laranjas
+    const c = kind === 'siteA' ? [88, 148, 230] : [232, 146, 63]; rect(c, -30, 0, 0, S, S);
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) rect(c, (i + j) % 2 ? 10 : -6, i * 32 + 1, j * 32 + 1, 30, 30);
+  }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestMipmapLinearFilter; t.anisotropy = aniso;
+  return { map: t, rough, metal };
+}
+function blockMat(kind, aniso, tint) {
+  const k = 'b:' + kind;
+  const t = texCache[k] || (texCache[k] = makeBlockTex(kind, aniso));
+  return new THREE.MeshStandardMaterial({ map: t.map, roughness: t.rough, metalness: t.metal, color: tint });
 }
