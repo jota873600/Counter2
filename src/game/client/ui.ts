@@ -35,10 +35,20 @@ export class HUD {
       <div class="hint"></div><div class="medbar"><i></i></div><div class="spec"></div>
       <div class="hp-box"><div class="stat" data-s="hp"><span class="ic">${ICON.health}</span><b>100</b><div class="bar"><i style="width:100%"></i></div></div><div class="stat ar" data-s="ar"><span class="ic">${ICON.shield}</span><b>0</b><small data-k="hm"></small><div class="bar ar"><i style="width:0"></i></div></div></div>
       <div class="money"><span class="ic">${ICON.coins}</span><span data-k="mo">$800</span></div>
-      <div class="ammo-box"><span class="ic">${ICON.bullet}</span><div class="am"><small data-k="wn"></small><div class="nums"><b data-k="mag">0</b> <span data-k="res">/ 0</span></div></div></div>
       <div class="chatlog"></div>
       <div class="keybar"></div>
-      <div class="fps"></div><button class="pausebtn ui-block" data-x="pause" title="Menu">☰</button>`;
+      <div class="tr-stack">
+        <div class="fps"></div>
+        <div class="wslots">
+          <div class="ws" data-sl="primary"><span class="n">1</span><span class="wname" data-k="s-primary"></span></div>
+          <div class="ws" data-sl="secondary"><span class="n">2</span><span class="wname" data-k="s-secondary"></span></div>
+          <div class="ws" data-sl="knife"><span class="n">3</span><span class="wname" data-k="s-knife"></span></div>
+          <div class="ws" data-sl="grenade"><span class="n">4</span><span class="wname" data-k="s-grenade"></span></div>
+          <div class="ws" data-sl="medkit"><span class="n">5</span><span class="wname" data-k="s-medkit"></span></div>
+        </div>
+        <div class="ammo-box"><span class="ic">${ICON.bullet}</span><div class="am"><small data-k="wn"></small><div class="nums"><b data-k="mag">0</b> <span data-k="res">/ 0</span></div></div></div>
+      </div>
+      <button class="pausebtn ui-block" data-x="pause" title="Menu">☰</button>`;
     root.appendChild(h);
     this.layer = document.createElement('div'); this.layer.className = 'layer hud'; root.appendChild(this.layer); // números flutuantes
     this.q = (s) => h.querySelector(s);
@@ -177,6 +187,26 @@ export class HUD {
     if (this.set('scope', s.scoped)) q('.scope').style.display = s.scoped ? 'block' : 'none';
     if (this.set('spec', s.spec || '')) { const e = q('.spec'); e.style.display = s.spec ? 'block' : 'none'; e.innerHTML = s.spec || ''; }
     if (s.fps !== undefined && this.set('fps', s.fps)) q('.fps').innerHTML = s.fps;
+    if (s.inv && this.set('slots', s.cur + '|' + JSON.stringify(s.inv))) {
+      const GRE = ['frag', 'smoke', 'flash'];
+      const held = GRE.filter((t) => s.inv[t] > 0);
+      const curGre = held.includes(s.cur) ? s.cur : held[0];
+      const greCount = held.reduce((a, t) => a + (s.inv[t] | 0), 0);
+      const label = {
+        primary: s.inv.primary && W[s.inv.primary] ? W[s.inv.primary].name : '',
+        secondary: s.inv.secondary && W[s.inv.secondary] ? W[s.inv.secondary].name : '',
+        knife: W.knife.name,
+        grenade: curGre ? `${W[curGre].name}${greCount > 1 ? ' ×' + greCount : ''}` : '',
+        medkit: s.inv.medkit > 0 ? W.medkit.name : '',
+      };
+      const onGre = GRE.includes(s.cur);
+      for (const sl of ['primary', 'secondary', 'knife', 'grenade', 'medkit']) {
+        const e = q(`.ws[data-sl=${sl}]`), has = sl === 'knife' ? true : !!label[sl];
+        e.classList.toggle('empty', !has);
+        e.classList.toggle('on', sl === 'grenade' ? onGre : s.cur === sl);
+        q(`[data-k="s-${sl}"]`).textContent = has ? label[sl] : '—';
+      }
+    }
   }
 
   /* ---- placar ---- */

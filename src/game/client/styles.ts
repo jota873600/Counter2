@@ -136,15 +136,25 @@ input,select{background:#161c27;border:1px solid #2c3647;color:#e8edf3;border-ra
 .stat b{font-size:24px;font-weight:800;line-height:1}.stat small{font-size:9px;color:#9fb0c3;text-align:right}
 .bar{grid-column:1/-1;height:6px;margin-top:6px;background:#3b3f45;overflow:hidden}.bar i{display:block;height:100%;background:#22c55e;transition:width .15s}
 .bar.ar i{background:#60a5fa}.low b,.low .ic{color:#f87171}.low .bar i{background:#ef4444}
-.money{position:absolute;right:8px;bottom:70px;display:flex;align-items:center;gap:7px;padding:5px 14px 5px 11px;font-size:20px;font-weight:800;color:#a3e635}
+.money{position:absolute;right:8px;bottom:10px;display:flex;align-items:center;gap:7px;padding:5px 14px 5px 11px;font-size:20px;font-weight:800;color:#a3e635}
 .money .ic{display:flex;width:24px;height:24px;color:#fbbf24}.money .ic svg{width:100%;height:100%}
-.ammo-box{position:absolute;right:7px;bottom:10px;display:flex;align-items:center;gap:10px;padding:7px 14px 8px 12px;text-align:left}
+/* bloco fixo no topo direito: fps -> slots de arma -> munição, empilhados e colados */
+.tr-stack{position:absolute;right:0;top:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.tr-stack .fps,.tr-stack .ammo-box{position:static}
+.ammo-box{display:flex;align-items:center;gap:10px;padding:7px 14px 8px 12px;text-align:left}
 .ammo-box .ic{display:flex;width:26px;height:26px;color:#e5e7eb}.ammo-box .ic svg{width:100%;height:100%}
 .ammo-box .am small{display:block;font-size:9px;color:#9fb0c3;letter-spacing:.5px;min-height:11px;white-space:nowrap}
 .ammo-box .nums b{font-size:26px;font-weight:800}.ammo-box .nums span{font-size:16px;color:#aab6c4}
+.wslots{display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.wslots .ws{display:flex;align-items:center;gap:7px;min-width:140px;padding:4px 12px 5px 14px;background:linear-gradient(#2a2f36,#14171b);clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07);opacity:.55;transition:opacity .15s,box-shadow .15s}
+.wslots .ws .n{font:800 11px system-ui,sans-serif;color:#9fb0c3;min-width:11px;text-align:center}
+.wslots .ws .wname{font:700 12px system-ui,sans-serif;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wslots .ws.empty .wname{color:#5b6572}
+.wslots .ws.on{opacity:1;box-shadow:inset 0 0 0 2px #3b82f6,0 0 14px rgba(59,130,246,.35)}
+.wslots .ws.on .n{color:#93c5fd}
 .topbar{top:6px}.topbar div{background:linear-gradient(#2a2f36,#14171b);padding:4px 14px}
 .topbar .tA{border-radius:0;clip-path:polygon(0 0,100% 0,100% 100%,9px 100%,0 calc(100% - 9px))}.topbar .tB{border-radius:0;clip-path:polygon(0 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%)}
-.fps{position:absolute;right:0;top:0;padding:6px 10px 7px 14px;font:700 11px/1.3 system-ui,sans-serif;color:#fff;text-align:left;background:linear-gradient(#2a2f36,#14171b);clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px);min-width:66px}.fps:empty{display:none}
+.fps{padding:6px 10px 7px 14px;font:700 11px/1.3 system-ui,sans-serif;color:#fff;text-align:left;background:linear-gradient(#2a2f36,#14171b);clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px);min-width:66px}.fps:empty{display:none}
 .sig{display:inline-flex;gap:2px;align-items:flex-end;height:13px;margin-left:5px;vertical-align:-2px;--c:#22c55e}.sig.s3{--c:#a3e635}.sig.s2{--c:#f59e0b}.sig.s1{--c:#ef4444}
 .sig i{display:block;width:3px;background:#4b5058}.sig i:nth-child(1){height:4px}.sig i:nth-child(2){height:7px}.sig i:nth-child(3){height:10px}.sig i:nth-child(4){height:13px}.sig i.on{background:var(--c)}
 .pausebtn{position:absolute;top:5px;right:98px;width:34px;height:34px;padding:0;font-size:18px;line-height:1;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(#2a2f36,#14171b);color:#e8edf3;z-index:18;cursor:pointer;display:flex;align-items:center;justify-content:center}.pausebtn:active{background:#2563eb}
