@@ -10,6 +10,7 @@ import { $, TEAM } from './ui';
 import { SKINS, clampSkin } from '../shared/skins';
 import { CharPreview } from './preview';
 import { openLayoutEditor } from './layoutEditor';
+import { avatarUrl } from './avatar';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ST = { online: 'Online', offline: 'Offline', lobby: 'Em sala', match: 'Em partida' };
@@ -67,9 +68,7 @@ export class Menus {
       </header>
       <div class="lb-body">
         <section class="lb-col">
-          <div class="card"><h3>Perfil</h3>
-            <div class="prow"><label>Nome</label><input data-x="name" value="${esc(id.name)}" maxlength="16"></div>
-            <div class="prow"><label>ID</label><span class="idchip" data-x="id" title="Toque para copiar">${esc(id.id || '------')}</span></div></div>
+          <button class="pchip" data-x="profile"><img class="pav" data-x="av" alt="" src="${avatarUrl(sk0, 96)}"><div class="skbtn-t"><strong data-x="pname">${esc(id.name || 'Jogador')}</strong><small>Toque para abrir o perfil</small></div><span class="skbtn-go">›</span></button>
           <div class="card"><h3>Visual</h3>
             <button class="skbtn" data-x="skins"><div class="fig"><i style="background:${hex(SKINS[sk0].skin)};${SKINS[sk0].accColor != null ? `box-shadow:0 -5px 0 ${hex(SKINS[sk0].accColor)}` : ''}"></i><b></b><u style="background:${hex(SKINS[sk0].legs)}"></u></div><div class="skbtn-t"><strong>👕 Skins</strong><small data-x="skname">${SKINS[sk0].name}</small></div><span class="skbtn-go">›</span></button></div>
         </section>
@@ -108,8 +107,7 @@ export class Menus {
     $(m, '[data-x=create]').onclick = () => a.roomCmd({ op: 'create', mode: this.cfg.mode, theme: this.cfg.theme, diff: this.cfg.diff });
     const join = () => { const c = $(m, '[data-x=code]').value.trim(); if (!c) return a.hud.toast('Digite o código da sala', 'e'); a.roomCmd({ op: 'join', code: c }); };
     $(m, '[data-x=join]').onclick = join; $(m, '[data-x=code]').onkeydown = (e) => { if (e.key === 'Enter') join(); };
-    $(m, '[data-x=name]').onchange = (e) => { a.setName(e.target.value); $(m, '[data-x=nm]').textContent = a.identity.name; };
-    $(m, '[data-x=id]').onclick = () => { try { navigator.clipboard.writeText(a.identity.id); a.hud.toast('ID copiado!'); } catch { a.hud.toast('ID: ' + a.identity.id); } };
+    $(m, '[data-x=profile]').onclick = () => this.profile();
     $(m, '[data-x=settings]').onclick = () => this.settings();
     $(m, '[data-x=help]').onclick = () => a.hud.showHelp(true);
     $(m, '[data-x=fs]').onclick = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch { /* */ } };
@@ -196,6 +194,39 @@ export class Menus {
   }
 
   /* ---------------- Configurações ---------------- */
+  /** Atualiza o avatar e o nome do chip de perfil e o nome sobre o boneco do lobby. */
+  refreshChip() {
+    const a = this.app, m = this.menu, id = a.identity, q = (x) => m.querySelector(x);
+    const av = q('[data-x=av]'); if (av) av.src = avatarUrl(settings.skin, 96);
+    const pn = q('[data-x=pname]'); if (pn) pn.textContent = id.name || 'Jogador';
+    const nm = q('[data-x=nm]'); if (nm) nm.textContent = id.name || '';
+  }
+
+  /** Perfil: avatar grande, nome, ID (copiar) e acesso à troca de skin. */
+  profile() {
+    const a = this.app, id = a.identity;
+    a.beforeModal();
+    const o = document.createElement('div'); o.className = 'set pfwrap ui-block'; this.root.appendChild(o);
+    o.innerHTML = `<div class="pf"><button class="cfg-x" data-x="close" title="Fechar">✕</button>
+      <h3 class="cfg-h">Perfil</h3>
+      <div class="pf-head"><img class="pav big" data-x="av2" alt="" src="${avatarUrl(settings.skin, 192)}"><div class="pf-id"><input class="pf-name" data-x="name" value="${esc(id.name)}" maxlength="16" placeholder="Seu nome"><small class="cfg-note">Este é o nome que os outros jogadores veem.</small></div></div>
+      <div class="cfg-row"><span class="cfg-l">ID</span><span class="idchip" data-x="id" style="flex:1">${esc(id.id || '------')}</span><button class="cfg-btn" data-x="copy">Copiar</button></div>
+      <div class="cfg-row"><span class="cfg-l">Skin</span><span class="cfg-v" data-x="pskin" style="flex:1;text-align:left;color:#e8edf3">${SKINS[clampSkin(settings.skin)].name}</span><button class="cfg-btn" data-x="skins">👕 Trocar</button></div>
+      <p class="cfg-note" style="margin:6px 2px 0">Passe o seu ID para os amigos te adicionarem.</p></div>`;
+    const close = () => { o.remove(); a.afterModal(); this.refreshChip(); };
+    $(o, '[data-x=close]').onclick = close; o.onclick = (e) => { if (e.target === o) close(); };
+    $(o, '[data-x=name]').onchange = (e) => { a.setName(e.target.value); e.target.value = a.identity.name; this.refreshChip(); };
+    $(o, '[data-x=copy]').onclick = () => { try { navigator.clipboard.writeText(a.identity.id); a.hud.toast('ID copiado!'); } catch { a.hud.toast('ID: ' + a.identity.id); } };
+    $(o, '[data-x=skins]').onclick = () => {
+      this.skins(); // abre por cima; ao fechar, atualiza o avatar e o nome da skin aqui
+      const wait = setInterval(() => {
+        if (document.querySelector('.skwrap')) return; clearInterval(wait);
+        const img = o.querySelector('[data-x=av2]'), t = o.querySelector('[data-x=pskin]');
+        if (img) img.src = avatarUrl(settings.skin, 192); if (t) t.textContent = SKINS[clampSkin(settings.skin)].name;
+      }, 200);
+    };
+  }
+
   initLobbyPreview() {
     this.disposePreview();
     const host = this.menu.querySelector('[data-x=stage]'); if (!host) return;
@@ -228,7 +259,7 @@ export class Menus {
       o.remove(); a.afterModal();
       const t = this.menu.querySelector('[data-x=skname]'); if (t) t.textContent = SKINS[eq].name;
       const n = this.menu.querySelector('[data-x=skn]'); if (n) n.textContent = SKINS[eq].name;
-      this.initLobbyPreview();
+      this.initLobbyPreview(); this.refreshChip();
     };
     o.querySelectorAll('[data-sk]').forEach((c) => (c.onclick = () => { sel = +c.dataset.sk; upd(); }));
     $(o, '[data-x=equip]').onclick = () => { a.setSkin(sel); eq = sel; upd(); a.hud.toast('Skin equipada: ' + SKINS[eq].name); };

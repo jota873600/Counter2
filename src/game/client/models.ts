@@ -150,11 +150,9 @@ const rbox = (g, w, h, d, x, y, z, m, r = 0.035) => {
 };
 
 const _faceMats = new Map();
-/** Rostos desenhados em canvas (um material por tipo de rosto). */
-function faceMaterial(type) {
-  let mat = _faceMats.get(type); if (mat) return mat;
-  const c = document.createElement('canvas'); c.width = c.height = 128;
-  const x = c.getContext('2d'); x.lineCap = 'round'; x.lineJoin = 'round';
+/** Desenha um rosto (olhos/boca) num contexto 2D de 128×128 — usado na textura do boneco e no avatar do perfil. */
+export function drawFace(x, type) {
+  x.lineCap = 'round'; x.lineJoin = 'round';
   const INK = '#0a0a0a';
   const oval = (cx, cy, rx, ry, col = INK) => { x.fillStyle = col; x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); x.fill(); };
   const arc = (cx, cy, r, a0, a1, w = 6, col = INK) => { x.strokeStyle = col; x.lineWidth = w; x.beginPath(); x.arc(cx, cy, r, Math.PI * a0, Math.PI * a1); x.stroke(); };
@@ -186,6 +184,13 @@ function faceMaterial(type) {
     default:
       oval(44, 58, 6, 11); oval(84, 58, 6, 11); arc(64, 66, 28, 0.18, 0.82, 6);
   }
+}
+
+/** Rostos desenhados em canvas (um material por tipo de rosto). */
+function faceMaterial(type) {
+  let mat = _faceMats.get(type); if (mat) return mat;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  drawFace(c.getContext('2d'), type);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   _faceMats.set(type, mat); return mat;

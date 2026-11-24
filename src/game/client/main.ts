@@ -124,7 +124,7 @@ class App {
 
   onNet(m) {
     switch (m.t) {
-      case 'welcome': this.identity.id = m.id; this.identity.name = m.name; saveIdentity(this.identity); { const c = document.querySelector('[data-x=id]'); if (c) c.textContent = m.id; } break;
+      case 'welcome': this.identity.id = m.id; this.identity.name = m.name; saveIdentity(this.identity); this.menus.refreshChip(); { const c = document.querySelector('[data-x=id]'); if (c) c.textContent = m.id; } break;
       case 'social': this.social = m; this.menus.friends(); break;
       case 'info': this.hud.toast(m.msg); break;
       case 'err': this.hud.toast(m.msg, 'e', 4200); this.audio.play('deny'); break;

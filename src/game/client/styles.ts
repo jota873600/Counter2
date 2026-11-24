@@ -225,4 +225,13 @@ input,select{background:#161c27;border:1px solid #2c3647;color:#e8edf3;border-ra
 .skw-foot{display:flex;justify-content:flex-end;gap:10px;padding-top:12px}
 @media (max-width:640px){.skw{grid-template-columns:1fr;grid-template-rows:38% 1fr;width:100vw;height:100vh;border-radius:0;border:0}.skw-view{border-right:0;border-bottom:1px solid #243044}}
 @media (max-height:430px){.skw{grid-template-columns:minmax(180px,34%) 1fr;height:97vh}.skw-main{padding:10px 12px 8px}.skc{padding:10px 4px 8px}.skc .fig{height:66px}.skc .fig i{width:24px;height:22px}.skc .fig b{width:38px;height:26px}.skc .fig u{width:30px;height:17px}.skw-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}.skw-name b{font-size:18px}}
+
+/* chip de perfil (lobby) e tela de perfil */
+.pchip{width:100%;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;background:rgba(14,19,28,.9);border:1px solid #243044;border-radius:14px;color:#e8edf3;cursor:pointer;text-align:left;flex:none}.pchip:hover{border-color:#3b82f6;background:#1a2a48}
+.pav{width:44px;height:44px;flex:none;border-radius:12px;border:2px solid #3b82f6;background:#101826;object-fit:cover}.pav.big{width:92px;height:92px;border-radius:18px}
+.pchip .skbtn-t strong{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pchip .skbtn-t small{color:#8ea0b7;font-size:11px}
+.set.pfwrap{display:flex;align-items:center;justify-content:center;background:rgba(5,8,12,.8)}
+.pf{position:relative;width:min(520px,94vw);max-height:94vh;overflow:auto;padding:16px 18px 14px;background:rgba(14,19,28,.97);border:1px solid #243044;border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.55);color:#e8edf3}
+.pf-head{display:flex;align-items:center;gap:16px;margin:4px 0 14px}.pf-id{flex:1;min-width:0}
+.pf-name{width:100%;box-sizing:border-box;font-size:20px;font-weight:800;padding:10px 12px;background:#121926;color:#fff;border:1px solid #2c3647;border-radius:10px;margin-bottom:6px}
 `;
