@@ -18,17 +18,25 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { buildWeapon } from './models';
+import { retargetClip } from './retarget';
 
 /* ------------------------------------------------------------------ */
 /* Configuração — ajuste aqui, com base no console, ao trocar de .glb  */
 /* ------------------------------------------------------------------ */
 export const CONFIG = {
   MODEL_URL: '/models/character.gltf', // malha + esqueleto (o personagem "boneco2")
-  // arquivos extras que só têm animação (mesmo esqueleto). Quando a animação chegar,
-  // coloque o arquivo em public/models/ e adicione o caminho aqui, ex: '/models/boneco2-anim.glb'
+  // arquivos extras que só têm animação, MESMO esqueleto do boneco (ex: outro .glb
+  // exportado do mesmo Prisma3D Pro). Coloque o caminho aqui, ex: '/models/boneco2-anim.glb'
   ANIM_URLS: [],
+  // animações baixadas do Mixamo (esqueleto "mixamorig:X", diferente do boneco) — passam
+  // pelo retargeting automático (retarget.ts) antes de entrar no jogo. "role" é o papel
+  // no jogo (bate com as chaves de CONFIG.ANIM abaixo).
+  FBX_ANIMS: [
+    { url: '/models/Idle.fbx', role: 'idle' },
+  ],
   USE_DRACO: false,               // true se o arquivo foi exportado com compressão Draco
   DRACO_PATH: '/draco/',          // pasta com os decoders do draco (se USE_DRACO = true)
   SCALE: 1,                       // ajuste se o personagem nascer grande/pequeno demais
@@ -79,6 +87,18 @@ export async function preloadCharacterModel(url = CONFIG.MODEL_URL) {
           animations.push(...animGltf.animations);
         } catch (err) {
           console.warn('[charModel] Não consegui carregar a animação "' + animUrl + '".', err);
+        }
+      }
+      for (const { url: fbxUrl, role } of CONFIG.FBX_ANIMS) {
+        try {
+          const fbxRoot = await new FBXLoader().loadAsync(fbxUrl);
+          const srcClip = fbxRoot.animations[0];
+          if (!srcClip) { console.warn('[charModel] "' + fbxUrl + '" não tem nenhuma animação dentro.'); continue; }
+          const clipName = CONFIG.ANIM[role] || role;
+          const retargeted = retargetClip(fbxRoot, srcClip, gltf.scene, clipName);
+          if (retargeted) { animations.push(retargeted); console.log('[charModel] Animação "' + clipName + '" retargetada a partir de "' + fbxUrl + '".'); }
+        } catch (err) {
+          console.warn('[charModel] Não consegui carregar/retargetar "' + fbxUrl + '".', err);
         }
       }
       const hasIdle = !!THREE.AnimationClip.findByName(animations, CONFIG.ANIM.idle);
