@@ -17,30 +17,32 @@
 import * as THREE from 'three';
 
 /** Mixamo (esquerda) -> nosso boneco Prisma3D (direita). Ajuste aqui se os nomes do seu
- *  modelo forem diferentes dos vistos no boneco1/boneco2. */
+ *  modelo forem diferentes dos vistos no boneco1/boneco2.
+ *  IMPORTANTE: o FBXLoader do three.js remove os ":" dos nomes ao carregar (ex:
+ *  "mixamorig:Hips" vira "mixamorigHips") — por isso aqui já está tudo sem os dois-pontos. */
 export const BONE_MAP = [
-  ['mixamorig:Hips', 'hip'],
-  ['mixamorig:Spine', 'waist'],
-  ['mixamorig:Neck', 'neck'],
-  ['mixamorig:Head', 'head'],
-  ['mixamorig:RightShoulder', 'rightShoulder'],
-  ['mixamorig:RightArm', 'rightUpperArm'],
-  ['mixamorig:RightForeArm', 'rightForearm'],
-  ['mixamorig:RightHand', 'rightHand'],
-  ['mixamorig:LeftShoulder', 'leftShoulder'],
-  ['mixamorig:LeftArm', 'leftUpperArm'],
-  ['mixamorig:LeftForeArm', 'leftForearm'],
-  ['mixamorig:LeftHand', 'leftHand'],
-  ['mixamorig:RightUpLeg', 'rightThigh'],
-  ['mixamorig:RightLeg', 'rightCalf'],
-  ['mixamorig:RightFoot', 'rightFoot'],
-  ['mixamorig:LeftUpLeg', 'leftThigh'],
-  ['mixamorig:LeftLeg', 'leftCalf'],
-  ['mixamorig:LeftFoot', 'leftFoot'],
+  ['mixamorigHips', 'hip'],
+  ['mixamorigSpine', 'waist'],
+  ['mixamorigNeck', 'neck'],
+  ['mixamorigHead', 'head'],
+  ['mixamorigRightShoulder', 'rightShoulder'],
+  ['mixamorigRightArm', 'rightUpperArm'],
+  ['mixamorigRightForeArm', 'rightForearm'],
+  ['mixamorigRightHand', 'rightHand'],
+  ['mixamorigLeftShoulder', 'leftShoulder'],
+  ['mixamorigLeftArm', 'leftUpperArm'],
+  ['mixamorigLeftForeArm', 'leftForearm'],
+  ['mixamorigLeftHand', 'leftHand'],
+  ['mixamorigRightUpLeg', 'rightThigh'],
+  ['mixamorigRightLeg', 'rightCalf'],
+  ['mixamorigRightFoot', 'rightFoot'],
+  ['mixamorigLeftUpLeg', 'leftThigh'],
+  ['mixamorigLeftLeg', 'leftCalf'],
+  ['mixamorigLeftFoot', 'leftFoot'],
 ];
 // "chest" no boneco não tem um correspondente direto (o Mixamo tem Spine1+Spine2); somamos
 // as duas rotações do Mixamo pra aproximar o movimento do tronco superior.
-export const CHEST_EXTRA_SOURCES = ['mixamorig:Spine1', 'mixamorig:Spine2'];
+export const CHEST_EXTRA_SOURCES = ['mixamorigSpine1', 'mixamorigSpine2'];
 export const CHEST_TARGET = 'chest';
 
 function findBone(root, name) {
