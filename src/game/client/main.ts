@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import { Engine } from './world';
 import { FX } from './fx';
 import { ViewModel } from './viewmodel';
-import { buildCharacter, setCharWeapon, animateCharacter, buildWeapon, MAT } from './models';
+import { buildWeapon, MAT } from './models';
+import { buildCharacter, setCharWeapon, animateCharacter, preloadCharacterModel } from './character';
 import { GameAudio } from './audio';
 import { Input } from './input';
 import { TouchControls } from './touch';
@@ -60,6 +61,7 @@ class App {
     this.last = performance.now(); this.fpsT = 0; this.fpsN = 0; this.fps = 0;
     this.ids = this.identity.id;
     this.net.connect({ id: this.identity.id, name: this.identity.name, skin: clampSkin(settings.skin) });
+    preloadCharacterModel(); // começa a carregar o personagem em .glb em paralelo; enquanto isso usa o procedural
     addEventListener('keydown', (e) => { if (e.code === 'Escape') this.onEscape(); });
     this.menus.main();
     if (this.input.effectiveMode() === 'kbm' && !settings.helpSeen) this.hud.showHelp(true);
@@ -498,7 +500,7 @@ class App {
     const scoped = !!wd.scope && this.vm.ads > 0.92 && alive;
     let spec = '';
     if (!alive && this.deadT > 1.6 && this.spectate) { const p = w.ps.find((x) => x.i === this.spectate); if (p) spec = `Assistindo: <b>${p.n}</b>`; }
-    hud.update({ hp: you.hp, ar: you.ar, hm: you.hm, mo: you.mo, wn: wd.name + (cnt >= 0 ? ` ×${cnt}` : ''), mag: isGun ? you.am[0] : -1, res: you.am[1], rl: you.rlp >= 0, cur: you.cur, inv: you.inv,
+    hud.update({ hp: you.hp, ar: you.ar, hm: you.hm, mo: you.mo, wn: wd.name + (cnt >= 0 ? ` ×${cnt}` : ''), mag: isGun ? you.am[0] : -1, res: you.am[1], rl: you.rlp >= 0, cur: you.cur, inv: you.inv, invAm: you.invAm,
       sc: w.sc, al, tm, ph: PHN[w.ph] || '', rd: `Round ${w.rd}/15`, gap, scoped, dead: !alive, fixed: this.input.fallbackActive, spec,
       fps: settings.fps ? `${this.fps} FPS<br>${this.transport === this.net ? this.net.ping + ' ms ' + sigBars(this.net.ping) : 'offline'}` : (this.transport === this.net ? `${this.net.ping} ms ${sigBars(this.net.ping)}` : '') });
     let ngr = 0; for (const k in you.inv) if (W[k] && W[k].slot === 'grenade') ngr += you.inv[k] | 0;

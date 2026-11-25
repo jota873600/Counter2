@@ -1,0 +1,37 @@
+STATUS ATUAL
+============
+character.gltf já está aqui (o "boneco2" que você mandou). Ele tem a malha,
+o esqueleto (31 ossos, nomes tipo hip/chest/rightUpperArm/rightHand/...) e
+as roupas (Hoodie, Trousers, T_shirt, Sneakers_socks, Hair, Eyebrow, Eyes,
+Body), mas AINDA NÃO TEM NENHUMA ANIMAÇÃO dentro dele.
+
+Por isso o jogo, por enquanto, continua usando o boneco procedural de
+sempre — é de propósito (veja isCharacterModelReady() em charModel.ts):
+ele só troca pro modelo novo quando pelo menos a animação "Idle" existir,
+assim nunca aparece um personagem travado/estático no meio da partida.
+
+PRÓXIMO PASSO: a animação
+==========================
+Quando você mandar o arquivo de animação (pode ser um .glb/.gltf separado,
+desde que use o MESMO esqueleto/nomes de osso do character.gltf):
+1. O arquivo entra aqui dentro também (ex: character-anim.glb).
+2. Em src/game/client/charModel.ts, adiciona o caminho dele em
+   CONFIG.ANIM_URLS, por exemplo:
+       ANIM_URLS: ['/models/character-anim.glb'],
+3. Roda o jogo e abre o console do navegador (F12): ele imprime os nomes
+   exatos dos clipes de animação encontrados.
+4. Ajusta CONFIG.ANIM (idle/walk/run/crouch/crouchIdle/death) com esses
+   nomes, se não baterem com os valores padrão.
+
+Já ajustado pro character.gltf atual
+=====================================
+- CONFIG.RIGHT_HAND_BONE = 'rightHand' (conferido lendo o arquivo).
+- CONFIG.UNIFORM_NAME_HINTS inclui 'hoodie' e 'trousers' (as peças de
+  roupa desse personagem), além dos nomes genéricos de antes.
+- Como o Hoodie/Trousers já vêm com textura/cor própria (não são um
+  uniforme branco liso), a cor do time é MISTURADA (não substitui 100%)
+  — ajuste CONFIG.UNIFORM_TINT_STRENGTH (0 a 1) se quiser mais ou menos
+  força nessa cor.
+- CONFIG.SCALE continua em 1 — não deu pra confirmar se a altura bate
+  exatamente com 1.78 m sem rodar o jogo de verdade; teste e ajuste esse
+  valor se o personagem nascer grande/pequeno demais.

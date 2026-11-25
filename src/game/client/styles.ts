@@ -146,12 +146,17 @@ input,select{background:#161c27;border:1px solid #2c3647;color:#e8edf3;border-ra
 .ammo-box .am small{display:block;font-size:9px;color:#9fb0c3;letter-spacing:.5px;min-height:11px;white-space:nowrap}
 .ammo-box .nums b{font-size:26px;font-weight:800}.ammo-box .nums span{font-size:16px;color:#aab6c4}
 .wslots{display:flex;flex-direction:column;gap:3px;align-items:flex-end}
-.wslots .ws{display:flex;align-items:center;gap:7px;min-width:140px;padding:4px 12px 5px 14px;background:linear-gradient(#2a2f36,#14171b);clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07);opacity:.55;transition:opacity .15s,box-shadow .15s}
+.wslots .ws{display:flex;align-items:center;gap:7px;min-width:150px;padding:4px 12px 5px 12px;background:linear-gradient(#2a2f36,#14171b);clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07);opacity:.55;transition:opacity .15s,box-shadow .15s}
 .wslots .ws .n{font:800 11px system-ui,sans-serif;color:#9fb0c3;min-width:11px;text-align:center}
+.wslots .ws .wi{display:flex;width:30px;height:18px;flex:0 0 auto;color:#e8edf3}.wslots .ws .wi svg{width:100%;height:100%}
+.wslots .ws .wt{display:flex;flex-direction:column;line-height:1.15;overflow:hidden}
 .wslots .ws .wname{font:700 12px system-ui,sans-serif;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wslots .ws .wam{font:800 11px system-ui,sans-serif;color:#9fb0c3;white-space:nowrap}
 .wslots .ws.empty .wname{color:#5b6572}
+.wslots .ws.empty .wi{opacity:.4}
 .wslots .ws.on{opacity:1;box-shadow:inset 0 0 0 2px #3b82f6,0 0 14px rgba(59,130,246,.35)}
 .wslots .ws.on .n{color:#93c5fd}
+.wslots .ws.on .wam{color:#cfe0ff}
 .topbar{top:6px}.topbar div{background:linear-gradient(#2a2f36,#14171b);padding:4px 14px}
 .topbar .tA{border-radius:0;clip-path:polygon(0 0,100% 0,100% 100%,9px 100%,0 calc(100% - 9px))}.topbar .tB{border-radius:0;clip-path:polygon(0 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%)}
 .fps{padding:6px 10px 7px 14px;font:700 11px/1.3 system-ui,sans-serif;color:#fff;text-align:left;background:linear-gradient(#2a2f36,#14171b);clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px);min-width:66px}.fps:empty{display:none}

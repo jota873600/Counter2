@@ -521,8 +521,9 @@ export class Sim {
     let you = null;
     if (p) {
       const wid = p.curId(), wd = W[wid], a = p.ammo[wid];
+      const pa = p.inv.primary ? p.ammo[p.inv.primary] : null, sa = p.inv.secondary ? p.ammo[p.inv.secondary] : null;
       you = { ack: p.ack, st: { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, g: p.g ? 1 : 0, cr: p.cr }, hp: Math.round(p.hp), ar: Math.round(p.armor), hm: p.helm ? 1 : 0, mo: p.money,
-        cur: p.cur, wid, inv: p.inv, am: a ? [a.mag, a.res] : [0, 0], pu: [n2(p.punch[0]), n2(p.punch[1])], spr: n2(wd.sp ? this.cone(p, wd) : 0),
+        cur: p.cur, wid, inv: p.inv, am: a ? [a.mag, a.res] : [0, 0], invAm: [pa ? [pa.mag, pa.res] : null, sa ? [sa.mag, sa.res] : null], pu: [n2(p.punch[0]), n2(p.punch[1])], spr: n2(wd.sp ? this.cone(p, wd) : 0),
         rlp: p.rlEnd ? n2(1 - (p.rlEnd - p.clock) / p.rlDur) : -1, rld: p.rlDur || 0, mdp: p.med ? n2(p.medT / ECON.MEDTIME) : -1, bl: n2(p.blind || 0), al: p.alive ? 1 : 0, spd: (wd.spd || 1) * (p.med ? 0.55 : 1) };
     }
     return { world, you, ev: this.ev };

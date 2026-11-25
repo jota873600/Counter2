@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { buildCharacter, setCharWeapon, animateCharacter } from './models';
+import { buildCharacter, setCharWeapon, animateCharacter } from './character';
 
 const TEAM_BLUE = 0x3a7bd5;
 

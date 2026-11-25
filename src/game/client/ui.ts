@@ -4,7 +4,7 @@
  * mira dinâmica, hitmarker, indicador de dano, números flutuantes, loja (B), placar (Tab),
  * dicas contextuais, overlays de Pointer Lock e painel "Como jogar" com teclas (keycaps).
  */
-import { ICON } from './icons';
+import { ICON, weaponIcon } from './icons';
 import * as THREE from 'three';
 import { W, ITEMS, SHOP_CATS } from '../shared/weapons';
 import { settings, bindLabel } from './settings';
@@ -40,11 +40,11 @@ export class HUD {
       <div class="tr-stack">
         <div class="fps"></div>
         <div class="wslots">
-          <div class="ws" data-sl="primary"><span class="n">1</span><span class="wname" data-k="s-primary"></span></div>
-          <div class="ws" data-sl="secondary"><span class="n">2</span><span class="wname" data-k="s-secondary"></span></div>
-          <div class="ws" data-sl="knife"><span class="n">3</span><span class="wname" data-k="s-knife"></span></div>
-          <div class="ws" data-sl="grenade"><span class="n">4</span><span class="wname" data-k="s-grenade"></span></div>
-          <div class="ws" data-sl="medkit"><span class="n">5</span><span class="wname" data-k="s-medkit"></span></div>
+          <div class="ws" data-sl="primary"><span class="wi" data-k="s-ic-primary"></span><span class="n">1</span><div class="wt"><span class="wname" data-k="s-primary"></span><span class="wam" data-k="s-am-primary"></span></div></div>
+          <div class="ws" data-sl="secondary"><span class="wi" data-k="s-ic-secondary"></span><span class="n">2</span><div class="wt"><span class="wname" data-k="s-secondary"></span><span class="wam" data-k="s-am-secondary"></span></div></div>
+          <div class="ws" data-sl="knife"><span class="wi" data-k="s-ic-knife"></span><span class="n">3</span><div class="wt"><span class="wname" data-k="s-knife"></span></div></div>
+          <div class="ws" data-sl="grenade"><span class="wi" data-k="s-ic-grenade"></span><span class="n">4</span><div class="wt"><span class="wname" data-k="s-grenade"></span></div></div>
+          <div class="ws" data-sl="medkit"><span class="wi" data-k="s-ic-medkit"></span><span class="n">5</span><div class="wt"><span class="wname" data-k="s-medkit"></span></div></div>
         </div>
         <div class="ammo-box"><span class="ic">${ICON.bullet}</span><div class="am"><small data-k="wn"></small><div class="nums"><b data-k="mag">0</b> <span data-k="res">/ 0</span></div></div></div>
       </div>
@@ -187,7 +187,7 @@ export class HUD {
     if (this.set('scope', s.scoped)) q('.scope').style.display = s.scoped ? 'block' : 'none';
     if (this.set('spec', s.spec || '')) { const e = q('.spec'); e.style.display = s.spec ? 'block' : 'none'; e.innerHTML = s.spec || ''; }
     if (s.fps !== undefined && this.set('fps', s.fps)) q('.fps').innerHTML = s.fps;
-    if (s.inv && this.set('slots', s.cur + '|' + JSON.stringify(s.inv))) {
+    if (s.inv && this.set('slots', s.cur + '|' + JSON.stringify(s.inv) + '|' + JSON.stringify(s.invAm || null))) {
       const GRE = ['frag', 'smoke', 'flash'];
       const held = GRE.filter((t) => s.inv[t] > 0);
       const curGre = held.includes(s.cur) ? s.cur : held[0];
@@ -199,12 +199,22 @@ export class HUD {
         grenade: curGre ? `${W[curGre].name}${greCount > 1 ? ' ×' + greCount : ''}` : '',
         medkit: s.inv.medkit > 0 ? W.medkit.name : '',
       };
+      const icon = {
+        primary: s.inv.primary && W[s.inv.primary] ? weaponIcon(W[s.inv.primary].cat) : '',
+        secondary: s.inv.secondary && W[s.inv.secondary] ? weaponIcon(W[s.inv.secondary].cat) : '',
+        knife: weaponIcon('knife'),
+        grenade: curGre ? weaponIcon(curGre) : weaponIcon('frag'),
+        medkit: weaponIcon('medkit'),
+      };
+      const am = { primary: s.invAm && s.invAm[0], secondary: s.invAm && s.invAm[1] };
       const onGre = GRE.includes(s.cur);
       for (const sl of ['primary', 'secondary', 'knife', 'grenade', 'medkit']) {
         const e = q(`.ws[data-sl=${sl}]`), has = sl === 'knife' ? true : !!label[sl];
         e.classList.toggle('empty', !has);
         e.classList.toggle('on', sl === 'grenade' ? onGre : s.cur === sl);
         q(`[data-k="s-${sl}"]`).textContent = has ? label[sl] : '—';
+        q(`[data-k="s-ic-${sl}"]`).innerHTML = has ? icon[sl] : '';
+        if (sl === 'primary' || sl === 'secondary') q(`[data-k="s-am-${sl}"]`).textContent = has && am[sl] ? `${am[sl][0]} / ${am[sl][1]}` : '';
       }
     }
   }
