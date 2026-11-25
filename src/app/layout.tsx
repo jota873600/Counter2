@@ -31,6 +31,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body style={{ margin: 0, background: "#0b0f16", overflow: "hidden" }}>
         {children}
         <PwaRegister />
+        {/* Console visual pra depurar pelo celular (sem precisar de computador). Mostra um
+            botãozinho flutuante no canto da tela — toque nele pra ver os logs do jogo.
+            Depois que não precisar mais, é só apagar este <script>. */}
+        <script src="https://cdn.jsdelivr.net/npm/eruda@3.4.1/eruda.min.js"></script>
+        <script dangerouslySetInnerHTML={{ __html: "eruda.init();" }} />
       </body>
     </html>
   );
