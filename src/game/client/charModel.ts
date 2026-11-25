@@ -42,6 +42,7 @@ export const CONFIG = {
   USE_DRACO: false,               // true se o arquivo foi exportado com compressão Draco
   DRACO_PATH: '/draco/',          // pasta com os decoders do draco (se USE_DRACO = true)
   SCALE: 1,                       // ajuste se o personagem nascer grande/pequeno demais
+  YAW_OFFSET: Math.PI,            // gira o boneco no próprio eixo; Math.PI = 180° (testando pra corrigir "andando de costas")
   // peças do "boneco2" tintadas com a cor do time (olhos/pele/cabelo ficam como vieram)
   UNIFORM_NAME_HINTS: ['uniform', 'torso', 'shirt', 'jacket', 'vest', 'hoodie', 'trousers'],
   UNIFORM_TINT_STRENGTH: 0.55,    // 0 = cor original da textura, 1 = cor do time cheia (as roupas já têm textura própria, então mistura em vez de substituir)
@@ -152,6 +153,7 @@ function findBoneByName(scene, name) {
 export function buildCharacterGLTF(color /*, skinId */) {
   const scene = SkeletonUtils.clone(template.scene);
   scene.scale.setScalar(CONFIG.SCALE);
+  scene.rotation.y = CONFIG.YAW_OFFSET; // corrige a frente do modelo em relação à direção do jogo
   scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   tintUniform(scene, color);
 
