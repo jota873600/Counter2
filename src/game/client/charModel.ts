@@ -36,6 +36,7 @@ export const CONFIG = {
   // no jogo (bate com as chaves de CONFIG.ANIM abaixo).
   FBX_ANIMS: [
     { url: '/models/Idle.fbx', role: 'idle' },
+    { url: '/models/Run_Forward.fbx', role: 'run' },
   ],
   USE_DRACO: false,               // true se o arquivo foi exportado com compressão Draco
   DRACO_PATH: '/draco/',          // pasta com os decoders do draco (se USE_DRACO = true)
