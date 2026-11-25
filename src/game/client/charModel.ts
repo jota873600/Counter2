@@ -36,6 +36,7 @@ export const CONFIG = {
   // no jogo (bate com as chaves de CONFIG.ANIM abaixo).
   FBX_ANIMS: [
     { url: '/models/Idle.fbx', role: 'idle' },
+    { url: '/models/Walk.fbx', role: 'walk' },
     { url: '/models/Run_Forward.fbx', role: 'run' },
   ],
   USE_DRACO: false,               // true se o arquivo foi exportado com compressão Draco
