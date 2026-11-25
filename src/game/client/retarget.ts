@@ -113,7 +113,7 @@ export function retargetClip(sourceRoot, sourceClip, targetScene, clipName, fps 
         const full = sampleTrack(srcTracks[k], t);
         const delta = bindSourceLocals[k].clone().invert().multiply(full); // delta no referencial da fonte
         const C = corrections[k];
-        const deltaInTarget = C.clone().invert().multiply(delta).multiply(C); // conjugação -> referencial do alvo
+        const deltaInTarget = C.clone().multiply(delta).multiply(C.clone().invert()); // conjugação -> referencial do alvo
         deltaTargetTotal.multiply(deltaInTarget); // soma (composição) quando há mais de uma fonte (ex: coluna)
       }
       const out = bindTargetLocal.clone().multiply(deltaTargetTotal);
