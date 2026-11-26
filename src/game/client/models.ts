@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { SKINS, clampSkin } from '../shared/skins';
+import { buildWeaponFromModel, isWeaponModelReady } from './weaponModel';
 
 const std = (color, rough, metal = 0) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
 export const MAT = {
@@ -35,6 +36,7 @@ const SPEC = {
 
 /** Constrói o modelo da arma e devolve partes animáveis e pontos de ancoragem das mãos. */
 export function buildWeapon(id) {
+  if (isWeaponModelReady(id)) { const fromModel = buildWeaponFromModel(id); if (fromModel) return fromModel; }
   const g = new THREE.Group(), parts = {};
   const info = { g, parts, sightY: 0.1, lh: new THREE.Vector3(0, -0.04, -0.2), rh: new THREE.Vector3(0, -0.02, 0.0), magPos: new THREE.Vector3(0, -0.1, -0.15), scope: false, kind: 'gun' };
   const S = SPEC[id];
