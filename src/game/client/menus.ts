@@ -11,34 +11,14 @@ import { SKINS, clampSkin } from '../shared/skins';
 import { CharPreview } from './preview';
 import { openLayoutEditor } from './layoutEditor';
 import { avatarUrl } from './avatar';
+import { preloadCharacterModel } from './character';
+
+// Dispara o carregamento do boneco em .glb/.fbx assim que o menu existe — bem antes de
+// entrar numa partida ou até de abrir a prévia do lobby, pra já estar pronto (ou perto
+// disso) quando qualquer um dos dois precisar construir um personagem.
+preloadCharacterModel();
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-/** CSS da tela "Escolha seu personagem" (injetado uma única vez). */
-const CSEL_CSS = `
-.csel{position:fixed;inset:0;z-index:60;font-family:Impact,'Arial Narrow',system-ui,sans-serif;color:#f1efe4;user-select:none;-webkit-user-select:none}
-.csel-view{position:absolute;inset:0;background:linear-gradient(#9fb6a0,#5d7a58 55%,#3b4a36)}
-.csel-view canvas{touch-action:none}
-.csel-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:14px;padding:12px 16px;pointer-events:none}
-.csel-top>*{pointer-events:auto}
-.csel-back{width:40px;height:40px;border:0;background:transparent;color:#fff;font-size:28px;cursor:pointer}
-.csel-vt{position:absolute;left:50%;top:14px;transform:translateX(-50%);text-align:center;font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:#e8e6d0;text-shadow:0 1px 4px #000a;pointer-events:none}
-.csel-vt small{display:block;opacity:.7;margin-top:2px}
-.csel-panel{position:absolute;left:clamp(8px,3vw,36px);top:50%;transform:translateY(-50%);width:min(44vw,340px);max-height:88vh;display:flex;flex-direction:column;gap:10px;padding:16px;background:rgba(32,38,30,.93);border-top:3px solid #f2c230;box-shadow:0 10px 40px #0008}
-.csel-tag{font-size:11px;letter-spacing:.3em;color:#f2c230}
-.csel-h{margin:0;font-size:clamp(28px,5vw,46px);line-height:.92;text-transform:uppercase;letter-spacing:.01em}
-.csel-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padding:2px}
-.csel-it{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.07);border:2px solid transparent;color:inherit;font:inherit;cursor:pointer;text-align:left;text-transform:uppercase}
-.csel-it small{font-size:10px;opacity:.6;letter-spacing:.15em}
-.csel-it b{flex:1;font-weight:400;font-size:17px;letter-spacing:.04em}
-.csel-it i{font-style:normal;opacity:.6}
-.csel-it.sel{border-color:#ff5a1f;background:rgba(255,90,31,.14);box-shadow:0 0 14px #ff5a1f66}
-.csel-it.eq b::after{content:' · EM USO';font-size:10px;color:#f2c230;letter-spacing:.12em}
-.csel-go{padding:14px;border:0;background:#f2c230;color:#1b1d14;font:inherit;font-size:18px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
-.csel-go:active{filter:brightness(.9)}
-.csel-hint{position:absolute;right:clamp(10px,3vw,36px);bottom:18px;display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;text-shadow:0 1px 4px #000a}
-.csel-hint button{width:34px;height:34px;border-radius:50%;border:2px solid #fff9;background:#0006;color:#fff;font-size:16px;cursor:pointer}
-@media (max-height:420px){.csel-panel{padding:10px;gap:6px}.csel-it{padding:6px 10px}.csel-h{font-size:24px}}
-`;
 const ST = { online: 'Online', offline: 'Offline', lobby: 'Em sala', match: 'Em partida' };
 
 export class Menus {
@@ -149,7 +129,7 @@ export class Menus {
 
     // boneco 3D do lobby + tela de Skins
     this.initLobbyPreview();
-    $(m, '[data-x=skins]').onclick = () => this.charSelect();
+    $(m, '[data-x=skins]').onclick = () => this.skins();
     this.friends();
   }
 
@@ -257,48 +237,6 @@ export class Menus {
     this.disposePreview();
     const host = this.menu.querySelector('[data-x=stage]'); if (!host) return;
     try { this.preview = new CharPreview(host); this.preview.setLook(clampSkin(settings.skin)); this.preview.start(); } catch { this.preview = null; }
-  }
-
-  /** Tela "Escolha seu personagem": lista (elenco) + vista 3D 360°. Confirmar equipa a skin. */
-  charSelect() {
-    const a = this.app;
-    if (!document.getElementById('csel-css')) { const st = document.createElement('style'); st.id = 'csel-css'; st.textContent = CSEL_CSS; document.head.appendChild(st); }
-    a.beforeModal();
-    this.disposePreview(); // libera o 3D do lobby enquanto esta tela está aberta
-    const o = document.createElement('div'); o.className = 'csel ui-block'; this.root.appendChild(o);
-    let eq = clampSkin(settings.skin), sel = eq;
-    o.innerHTML = `<div class="csel-view" data-x="view"></div>
-      <div class="csel-top"><button class="csel-back" data-x="back" title="Voltar">←</button></div>
-      <div class="csel-vt">Vista do personagem<small>/ 360°</small></div>
-      <aside class="csel-panel">
-        <div class="csel-tag">ELENCO</div>
-        <h2 class="csel-h">Escolha seu<br>personagem</h2>
-        <div class="csel-list">${SKINS.map((k, i) => `<button class="csel-it" data-sk="${i}"><small>${String(i + 1).padStart(2, '0')}</small><b>${esc(k.name)}</b><i>›</i></button>`).join('')}</div>
-        <button class="csel-go" data-x="go"><span data-x="golbl">Confirmar</span><span>→</span></button>
-      </aside>
-      <div class="csel-hint"><button data-x="rl" title="Girar">↶</button>Arraste para girar<button data-x="rr" title="Girar">↷</button></div>`;
-    let pv = null;
-    try { pv = new CharPreview($(o, '[data-x=view]')); pv.start(); } catch { pv = null; }
-    const upd = () => {
-      o.querySelectorAll('[data-sk]').forEach((c) => { const i = +c.dataset.sk; c.classList.toggle('sel', i === sel); c.classList.toggle('eq', i === eq); });
-      $(o, '[data-x=golbl]').textContent = sel === eq ? 'Continuar' : 'Confirmar';
-      if (pv) pv.setLook(sel);
-    };
-    const close = (apply) => {
-      if (pv) pv.dispose();
-      o.remove(); a.afterModal();
-      if (apply && sel !== eq) { a.setSkin(sel); eq = sel; a.hud.toast('Personagem: ' + SKINS[eq].name); }
-      const t = this.menu.querySelector('[data-x=skname]'); if (t) t.textContent = SKINS[eq].name;
-      const n = this.menu.querySelector('[data-x=skn]'); if (n) n.textContent = SKINS[eq].name;
-      this.initLobbyPreview(); this.refreshChip();
-    };
-    // girar pelos botões (usa a API do CharPreview se existir; arrastar já é tratado por ele)
-    const rot = (d) => { if (!pv) return; if (typeof pv.rotate === 'function') pv.rotate(d); else if (typeof pv.yaw === 'number') pv.yaw += d; };
-    o.querySelectorAll('[data-sk]').forEach((c) => (c.onclick = () => { sel = +c.dataset.sk; upd(); }));
-    $(o, '[data-x=rl]').onclick = () => rot(-0.6); $(o, '[data-x=rr]').onclick = () => rot(0.6);
-    $(o, '[data-x=go]').onclick = () => close(true);
-    $(o, '[data-x=back]').onclick = () => close(false);
-    upd();
   }
 
   /** Tela de Skins: grade grande + prévia 3D; "Equipar" aplica, "Voltar" descarta. */

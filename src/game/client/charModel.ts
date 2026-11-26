@@ -184,8 +184,10 @@ export function setCharWeaponGLTF(ch, id) {
   if (!id) return;
   const w = buildWeapon(id);
   u.mount.add(w.g); u.weapon = w.g;
-  // Ponto de partida — calibre posição/rotação/escala olhando a arma na mão do seu rig:
-  w.g.position.set(0, 0, 0); w.g.rotation.set(0, Math.PI / 2, 0); w.g.scale.setScalar(1.15);
+  // Rotação calculada a partir da pose real das mãos (ver validate_retarget.py) — bem
+  // mais próxima do certo que o chute inicial. Pequenos ajustes finos ainda podem ser
+  // necessários; mexa esses 3 números se a arma ainda estiver um pouco torta.
+  w.g.position.set(0, 0, 0); w.g.rotation.set(-1.635, 0.007, 0.007); w.g.scale.setScalar(1.0);
 }
 
 function crossTo(u, role, fadeTime = CONFIG.CROSSFADE) {
