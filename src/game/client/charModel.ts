@@ -51,6 +51,7 @@ export const CONFIG = {
     { url: '/models/Walk.fbx', as: 'Walk' },
     { url: '/models/Run_Forward.fbx', as: 'Run' },
     { url: '/models/Pistol_Walk.fbx', as: 'Walk_Pistol' }, // andar atirando de pistola
+    { url: '/models/Death.fbx', as: 'Death' },
   ],
   USE_DRACO: false,               // true se o arquivo foi exportado com compressão Draco
   DRACO_PATH: '/draco/',          // pasta com os decoders do draco (se USE_DRACO = true)
@@ -179,7 +180,13 @@ export function buildCharacterGLTF(color /*, skinId */) {
   const clips = {};
   for (const [role, name] of Object.entries(CONFIG.ANIM)) {
     const clip = THREE.AnimationClip.findByName(template.animations, name);
-    if (clip) clips[role] = mixer.clipAction(clip);
+    if (clip) {
+      const action = mixer.clipAction(clip);
+      // "death" é a única animação que não deve ficar em loop — toca uma vez e
+      // congela no último quadro (o personagem fica caído, não "reiniciando" a queda)
+      if (role === 'death') { action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; }
+      clips[role] = action;
+    }
     else console.warn('[charModel] Animação "' + name + '" (papel "' + role + '") não encontrada — confira CONFIG.ANIM.');
   }
   // variantes por classe de arma (CONFIG.ANIM_VARIANTS), guardadas como "papel__classe"

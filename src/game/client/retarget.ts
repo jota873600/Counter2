@@ -44,6 +44,10 @@ export const BONE_MAP = [
 // as duas rotações do Mixamo pra aproximar o movimento do tronco superior.
 export const CHEST_EXTRA_SOURCES = ['mixamorigSpine1', 'mixamorigSpine2'];
 export const CHEST_TARGET = 'chest';
+// só o osso raiz costuma ter POSIÇÃO animada (os outros só giram) — importante pra animações
+// como "Death", onde o quadril precisa realmente cair/deslizar, não só os membros dobrarem.
+export const ROOT_BONE_SOURCE = 'mixamorigHips';
+export const ROOT_BONE_TARGET = 'hip';
 
 function findBone(root, name) {
   let found = null;
@@ -69,6 +73,18 @@ function sampleTrack(track, t) {
 
 function findQuatTrack(clip, boneName) {
   return clip.tracks.find((tr) => tr.name === boneName + '.quaternion' && tr instanceof THREE.QuaternionKeyframeTrack);
+}
+
+function findPosTrack(clip, boneName) {
+  return clip.tracks.find((tr) => tr.name === boneName + '.position' && tr instanceof THREE.VectorKeyframeTrack);
+}
+
+function sampleVec3(track, t) {
+  const interp = track.createInterpolant();
+  const out = new THREE.Vector3();
+  interp.evaluate(t);
+  out.fromArray(interp.resultBuffer);
+  return out;
 }
 
 /**
@@ -122,8 +138,34 @@ export function retargetClip(sourceRoot, sourceClip, targetScene, clipName, fps 
     tracks.push(new THREE.QuaternionKeyframeTrack(targetName + '.quaternion', times, values));
   }
 
+  function buildRootPosition() {
+    const targetBone = findBone(targetScene, ROOT_BONE_TARGET);
+    const sourceBone = findBone(sourceRoot, ROOT_BONE_SOURCE);
+    const srcTrack = findPosTrack(sourceClip, ROOT_BONE_SOURCE);
+    if (!targetBone || !sourceBone || !srcTrack) return; // sem movimento de raiz nessa animação (ex: Idle/Walk) — tudo bem, fica parado
+
+    const bindTargetLocalPos = targetBone.position.clone();
+    const bindSourceLocalPos = sourceBone.position.clone();
+    // os dois bonecos têm tamanhos diferentes — usa a altura do quadril (em relação ao
+    // chão) de cada um pra escalar o deslocamento, assim a queda fica proporcional
+    const targetHipY = targetBone.getWorldPosition(new THREE.Vector3()).y;
+    const sourceHipY = sourceBone.getWorldPosition(new THREE.Vector3()).y;
+    const scale = (targetHipY > 0.01 && sourceHipY > 0.01) ? (targetHipY / sourceHipY) : 1;
+
+    const values = new Float32Array(nFrames * 3);
+    for (let i = 0; i < nFrames; i++) {
+      const t = times[i];
+      const full = sampleVec3(srcTrack, t);
+      const delta = full.clone().sub(bindSourceLocalPos).multiplyScalar(scale);
+      const out = bindTargetLocalPos.clone().add(delta);
+      values[i * 3 + 0] = out.x; values[i * 3 + 1] = out.y; values[i * 3 + 2] = out.z;
+    }
+    tracks.push(new THREE.VectorKeyframeTrack(ROOT_BONE_TARGET + '.position', times, values));
+  }
+
   for (const [src, tgt] of BONE_MAP) buildPair(tgt, [src]);
   buildPair(CHEST_TARGET, CHEST_EXTRA_SOURCES);
+  buildRootPosition();
 
   if (!tracks.length) { console.warn('[retarget] nenhum osso bateu — confira BONE_MAP em retarget.ts.'); return null; }
   return new THREE.AnimationClip(clipName, duration, tracks);
