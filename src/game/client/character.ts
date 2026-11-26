@@ -15,9 +15,10 @@ import {
 import {
   isCharacterModelReady, preloadCharacterModel,
   buildCharacterGLTF, setCharWeaponGLTF, animateCharacterGLTF,
+  getHandMesh,
 } from './charModel';
 
-export { preloadCharacterModel, isCharacterModelReady };
+export { preloadCharacterModel, isCharacterModelReady, getHandMesh };
 
 export function buildCharacter(color, skinId) {
   return isCharacterModelReady() ? buildCharacterGLTF(color, skinId) : buildCharacterProcedural(color, skinId);

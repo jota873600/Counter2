@@ -22,7 +22,30 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { buildWeapon } from './models';
 import { retargetClip } from './retarget';
+import { extractRigidPart } from './armExtract';
 import { W } from '../shared/weapons';
+
+let handMeshes = null; // { right, left } — THREE.Mesh, extraídos uma vez do template
+
+/** Mãos de verdade do boneco2 (extraídas da malha "Body"), pra usar no braço de primeira
+ *  pessoa (viewmodel.ts) no lugar da caixinha procedural. null até o modelo carregar/se
+ *  a extração falhar — quem usa trata isso como "ainda não disponível, usa o fallback". */
+export function getHandMesh(side) {
+  if (!handMeshes || !template) return null;
+  return handMeshes[side] ? handMeshes[side].clone() : null;
+}
+
+function buildHandMeshes() {
+  try {
+    handMeshes = {
+      right: extractRigidPart(template.scene, 'Body', ['rightHand']),
+      left: extractRigidPart(template.scene, 'Body', ['leftHand']),
+    };
+  } catch (err) {
+    console.warn('[charModel] Não consegui extrair as mãos do boneco2 — primeira pessoa usa o braço procedural normalmente.', err);
+    handMeshes = null;
+  }
+}
 
 /** Classe da arma atual, pra escolher a variante certa de animação (CONFIG.ANIM_VARIANTS).
  *  Por enquanto só distingue pistola; dá pra acrescentar 'sniper'/'big' depois do mesmo jeito. */
@@ -124,6 +147,7 @@ export async function preloadCharacterModel(url = CONFIG.MODEL_URL) {
       }
       const hasIdle = !!THREE.AnimationClip.findByName(animations, CONFIG.ANIM.idle);
       template = { scene: gltf.scene, animations, hasIdle };
+      buildHandMeshes(); // precisa ser ANTES de qualquer mixer tocar (bind pose intacta)
       logGltfInfo(gltf, animations, hasIdle);
       return template;
     } catch (err) {

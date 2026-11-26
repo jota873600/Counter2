@@ -7,6 +7,15 @@
  */
 import * as THREE from 'three';
 import { buildWeapon, MAT, teamMat } from './models';
+import { getHandMesh } from './character';
+
+// Ajuste fino depois de ver no jogo de verdade: a mão extraída do boneco2 nasce com o
+// eixo "de fábrica" dela (o jeito que o osso da mão foi orientado no Prisma3D Pro), que
+// não necessariamente bate com a convenção usada aqui (eixo Y apontando no sentido do
+// braço). Se a mão aparecer torta/de lado/de cabeça pra baixo, gire aqui até alinhar —
+// não precisa mexer em mais nada.
+const HAND_ROT_FIX = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0));
+const HAND_POS_FIX = 0; // deslocamento extra ao longo do braço (metros), se a mão nascer deslocada
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
@@ -21,14 +30,18 @@ export class ViewModel {
     this.gun = new THREE.Group(); this.root.add(this.gun);
     this.ads = 0; this.bobT = 0; this.t = 0; this.sw = { x: 0, y: 0 }; this.kz = 0; this.krx = 0; this.slide = 0; this.pump = 0; this.flashT = 0;
     this.swingT = -1; this.swingHeavy = false; this.throwT = -1; this.hideNade = false; this.lastRl = -1; this.rlFlags = {};
-    // Braços
+    // Braços — usa a mão de verdade do boneco2 quando ela já estiver pronta (ver
+    // maybeUpgradeHands()); antes disso, ou se a extração falhar, cai na caixinha simples.
     this.sleeveMat = teamMat(0x3a5f8f);
-    const mkArm = () => {
-      const g = new THREE.Group(), up = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 1, 10), this.sleeveMat), hand = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.055, 0.1), MAT.glove);
+    const mkArm = (side) => {
+      const g = new THREE.Group(), up = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 1, 10), this.sleeveMat);
+      const realHand = getHandMesh(side);
+      const hand = realHand || new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.055, 0.1), MAT.glove);
       const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.05, 10), MAT.glove);
-      g.add(up, hand, wrist); this.root.add(g); return { g, up, hand, wrist };
+      g.add(up, hand, wrist); this.root.add(g); return { g, up, hand, wrist, side, real: !!realHand };
     };
-    this.armR = mkArm(); this.armL = mkArm();
+    this.armR = mkArm('right'); this.armL = mkArm('left');
+    this.handsUpgraded = false;
     // Clarão do cano
     const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d');
     const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,250,220,1)'); gr.addColorStop(0.3, 'rgba(255,190,90,0.85)'); gr.addColorStop(1, 'rgba(255,120,30,0)');
@@ -41,6 +54,19 @@ export class ViewModel {
 
   setTeam(color) { this.sleeveMat.color.set(color); }
   model(id) { return this.cache[id] || (this.cache[id] = buildWeapon(id)); }
+
+  /** O modelo .glb carrega em paralelo (pode demorar um pouco), então o braço nasce com
+   *  a caixinha de sempre e troca sozinho pra mão de verdade assim que ela ficar pronta —
+   *  sem isso, quem já tinha aberto o jogo antes do modelo carregar ficaria preso na
+   *  caixinha pro resto da partida. Para de checar depois que as duas já trocaram. */
+  maybeUpgradeHands() {
+    if (this.handsUpgraded) return;
+    const r = !this.armR.real && getHandMesh('right');
+    const l = !this.armL.real && getHandMesh('left');
+    if (r) { this.armR.g.remove(this.armR.hand); this.armR.hand = r; this.armR.real = true; this.armR.g.add(r); }
+    if (l) { this.armL.g.remove(this.armL.hand); this.armL.hand = l; this.armL.real = true; this.armL.g.add(l); }
+    if (this.armR.real && this.armL.real) this.handsUpgraded = true;
+  }
 
   setWeapon(id) {
     if (this.cur) this.gun.remove(this.cur.g);
@@ -64,6 +90,7 @@ export class ViewModel {
   /** st: {wid, ads, speed, grounded, cr, sprint, dyaw, dpitch, rlp, mdp, dead, scoped} */
   update(dt, st) {
     this.t += dt;
+    this.maybeUpgradeHands();
     const R = this.root;
     if (!st.wid || st.dead) { R.visible = false; return; }
     // Troca de arma: guarda a antiga, saca a nova
@@ -192,7 +219,9 @@ export class ViewModel {
     arm.up.position.copy(from).addScaledVector(d, L / 2 - 0.03); arm.up.scale.set(1, L - 0.06, 1);
     arm.up.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d);
     arm.wrist.position.copy(to).addScaledVector(d, -0.03); arm.wrist.quaternion.copy(arm.up.quaternion);
-    arm.hand.position.copy(to).addScaledVector(d, 0.02); arm.hand.quaternion.copy(arm.up.quaternion);
+    arm.hand.position.copy(to).addScaledVector(d, arm.real ? 0.02 + HAND_POS_FIX : 0.02);
+    arm.hand.quaternion.copy(arm.up.quaternion);
+    if (arm.real) arm.hand.quaternion.multiply(HAND_ROT_FIX);
     arm.up.matrixAutoUpdate = true;
   }
 }
