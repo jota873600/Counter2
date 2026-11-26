@@ -1,37 +1,28 @@
 STATUS ATUAL
 ============
-character.gltf já está aqui (o "boneco2" que você mandou). Ele tem a malha,
-o esqueleto (31 ossos, nomes tipo hip/chest/rightUpperArm/rightHand/...) e
-as roupas (Hoodie, Trousers, T_shirt, Sneakers_socks, Hair, Eyebrow, Eyes,
-Body), mas AINDA NÃO TEM NENHUMA ANIMAÇÃO dentro dele.
+character.gltf (o "boneco2") está aqui, com malha + esqueleto, e já tem animação:
+- Idle.fbx, Walk.fbx, Run_Forward.fbx  -> Idle/Walk/Run padrão (todo mundo)
+- Pistol_Walk.fbx                      -> Walk_Pistol, SÓ pra quem tá com pistola
 
-Por isso o jogo, por enquanto, continua usando o boneco procedural de
-sempre — é de propósito (veja isCharacterModelReady() em charModel.ts):
-ele só troca pro modelo novo quando pelo menos a animação "Idle" existir,
-assim nunca aparece um personagem travado/estático no meio da partida.
+Essas animações vêm do Mixamo (esqueleto "mixamorig:X", diferente do boneco2) e passam
+pelo retargeting automático em src/game/client/retarget.ts antes de entrar no jogo —
+não precisa mexer em nada manualmente pra isso funcionar, só colocar o arquivo e apontar
+pra ele em CONFIG.FBX_ANIMS (charModel.ts).
 
-PRÓXIMO PASSO: a animação
-==========================
-Quando você mandar o arquivo de animação (pode ser um .glb/.gltf separado,
-desde que use o MESMO esqueleto/nomes de osso do character.gltf):
-1. O arquivo entra aqui dentro também (ex: character-anim.glb).
-2. Em src/game/client/charModel.ts, adiciona o caminho dele em
-   CONFIG.ANIM_URLS, por exemplo:
-       ANIM_URLS: ['/models/character-anim.glb'],
-3. Roda o jogo e abre o console do navegador (F12): ele imprime os nomes
-   exatos dos clipes de animação encontrados.
-4. Ajusta CONFIG.ANIM (idle/walk/run/crouch/crouchIdle/death) com esses
-   nomes, se não baterem com os valores padrão.
+Variantes por tipo de arma (CONFIG.ANIM_VARIANTS em charModel.ts)
+===================================================================
+Hoje só tem uma: pistola usa "Walk_Pistol" em vez do "Walk" normal, enquanto anda.
+Pra adicionar outra (ex: um Idle diferente pra fuzil, ou algo pra sniper/faca):
+1. Arquivo .fbx do Mixamo entra em public/models/ e uma entrada em CONFIG.FBX_ANIMS,
+   com um "as" (nome do clipe) que não bata com nenhum nome já usado — ex: "Idle_Rifle".
+2. Uma linha em CONFIG.ANIM_VARIANTS, na classe certa (ou uma classe nova — aí também
+   precisa ensinar weaponClass(), no topo de charModel.ts, a reconhecer essa classe,
+   olhando W[id].cat ou o id da arma).
 
-Já ajustado pro character.gltf atual
-=====================================
-- CONFIG.RIGHT_HAND_BONE = 'rightHand' (conferido lendo o arquivo).
-- CONFIG.UNIFORM_NAME_HINTS inclui 'hoodie' e 'trousers' (as peças de
-  roupa desse personagem), além dos nomes genéricos de antes.
-- Como o Hoodie/Trousers já vêm com textura/cor própria (não são um
-  uniforme branco liso), a cor do time é MISTURADA (não substitui 100%)
-  — ajuste CONFIG.UNIFORM_TINT_STRENGTH (0 a 1) se quiser mais ou menos
-  força nessa cor.
-- CONFIG.SCALE continua em 1 — não deu pra confirmar se a altura bate
-  exatamente com 1.78 m sem rodar o jogo de verdade; teste e ajuste esse
-  valor se o personagem nascer grande/pequeno demais.
+Ainda em aberto
+===============
+- CONFIG.YAW_OFFSET (= 180°) é uma correção testada pro boneco não andar "de costas" —
+  joga no jogo de verdade e confirma se ficou certo.
+- CONFIG.SCALE continua em 1 — ajuste se o personagem nascer grande/pequeno demais.
+- CONFIG.UNIFORM_TINT_STRENGTH (0 a 1) controla o quanto a cor do time mistura com a
+  roupa (Hoodie/Trousers), já que elas têm textura própria.

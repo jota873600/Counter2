@@ -12,13 +12,11 @@ import { CharPreview } from './preview';
 import { openLayoutEditor } from './layoutEditor';
 import { avatarUrl } from './avatar';
 import { preloadCharacterModel } from './character';
-import { preloadWeaponModels } from './weaponModel';
 
 // Dispara o carregamento do boneco em .glb/.fbx assim que o menu existe — bem antes de
 // entrar numa partida ou até de abrir a prévia do lobby, pra já estar pronto (ou perto
 // disso) quando qualquer um dos dois precisar construir um personagem.
 preloadCharacterModel();
-preloadWeaponModels();
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ST = { online: 'Online', offline: 'Offline', lobby: 'Em sala', match: 'Em partida' };

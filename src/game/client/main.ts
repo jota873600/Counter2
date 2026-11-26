@@ -454,7 +454,7 @@ class App {
       if (p.al) setCharWeapon(c.obj, p.cu);
       if (p.sh !== c.sh) { c.sh = p.sh; }
       c.kick = Math.max(0, c.kick - dt * 1.5);
-      animateCharacter(c.obj, dt, { speed: p.sp, grounded: !!p.g, cr: p.cr, pitch: p.pt, yaw: p.yw, kind: kindOf(p.cu), helm: p.hm, armor: p.ar, alive: !!p.al, dv: p.dv || [0, 0], kick: -c.kick });
+      animateCharacter(c.obj, dt, { speed: p.sp, grounded: !!p.g, cr: p.cr, pitch: p.pt, yaw: p.yw, kind: kindOf(p.cu), wid: p.cu, helm: p.hm, armor: p.ar, alive: !!p.al, dv: p.dv || [0, 0], kick: -c.kick });
       if (p.i !== this.myId && p.al && p.g && p.sp > 2.4 && !p.sl && p.cr < 0.5) { c.stepD += p.sp * dt; if (c.stepD > 2.0) { c.stepD = 0; this.audio.play('step', [p.x, p.y, p.z], 0.8); } }
     }
   }

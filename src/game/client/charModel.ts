@@ -22,6 +22,17 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { buildWeapon } from './models';
 import { retargetClip } from './retarget';
+import { W } from '../shared/weapons';
+
+/** Classe da arma atual, pra escolher a variante certa de animação (CONFIG.ANIM_VARIANTS).
+ *  Por enquanto só distingue pistola; dá pra acrescentar 'sniper'/'big' depois do mesmo jeito. */
+function weaponClass(wid) {
+  if (!wid) return 'default';
+  const w = W[wid];
+  if (!w) return 'default';
+  if (w.cat === 'pistols') return 'pistol';
+  return 'default';
+}
 
 /* ------------------------------------------------------------------ */
 /* Configuração — ajuste aqui, com base no console, ao trocar de .glb  */
@@ -32,12 +43,14 @@ export const CONFIG = {
   // exportado do mesmo Prisma3D Pro). Coloque o caminho aqui, ex: '/models/boneco2-anim.glb'
   ANIM_URLS: [],
   // animações baixadas do Mixamo (esqueleto "mixamorig:X", diferente do boneco) — passam
-  // pelo retargeting automático (retarget.ts) antes de entrar no jogo. "role" é o papel
-  // no jogo (bate com as chaves de CONFIG.ANIM abaixo).
+  // pelo retargeting automático (retarget.ts) antes de entrar no jogo. "as" é o nome final
+  // do clipe: um nome de CONFIG.ANIM (vale pra todo mundo) ou de CONFIG.ANIM_VARIANTS
+  // (só pra quem tiver a classe de arma certa — ex: pistola).
   FBX_ANIMS: [
-    { url: '/models/Idle.fbx', role: 'idle' },
-    { url: '/models/Walk.fbx', role: 'walk' },
-    { url: '/models/Run_Forward.fbx', role: 'run' },
+    { url: '/models/Idle.fbx', as: 'Idle' },
+    { url: '/models/Walk.fbx', as: 'Walk' },
+    { url: '/models/Run_Forward.fbx', as: 'Run' },
+    { url: '/models/Pistol_Walk.fbx', as: 'Walk_Pistol' }, // andar atirando de pistola
   ],
   USE_DRACO: false,               // true se o arquivo foi exportado com compressão Draco
   DRACO_PATH: '/draco/',          // pasta com os decoders do draco (se USE_DRACO = true)
@@ -56,6 +69,11 @@ export const CONFIG = {
     crouch: 'CrouchWalk',
     crouchIdle: 'CrouchIdle',
     death: 'Death',
+  },
+  // sobrescreve o clipe de um papel quando weaponClass(arma atual) bate com a classe.
+  // "Walk_Pistol" é o Pistol_Walk.fbx: só entra quando a arma equipada é uma pistola.
+  ANIM_VARIANTS: {
+    pistol: { walk: 'Walk_Pistol' },
   },
   CROSSFADE: 0.18,
 };
@@ -92,12 +110,11 @@ export async function preloadCharacterModel(url = CONFIG.MODEL_URL) {
           console.warn('[charModel] Não consegui carregar a animação "' + animUrl + '".', err);
         }
       }
-      for (const { url: fbxUrl, role } of CONFIG.FBX_ANIMS) {
+      for (const { url: fbxUrl, as: clipName } of CONFIG.FBX_ANIMS) {
         try {
           const fbxRoot = await new FBXLoader().loadAsync(fbxUrl);
           const srcClip = fbxRoot.animations[0];
           if (!srcClip) { console.warn('[charModel] "' + fbxUrl + '" não tem nenhuma animação dentro.'); continue; }
-          const clipName = CONFIG.ANIM[role] || role;
           const retargeted = retargetClip(fbxRoot, srcClip, gltf.scene, clipName);
           if (retargeted) { animations.push(retargeted); console.log('[charModel] Animação "' + clipName + '" retargetada a partir de "' + fbxUrl + '".'); }
         } catch (err) {
@@ -165,6 +182,14 @@ export function buildCharacterGLTF(color /*, skinId */) {
     if (clip) clips[role] = mixer.clipAction(clip);
     else console.warn('[charModel] Animação "' + name + '" (papel "' + role + '") não encontrada — confira CONFIG.ANIM.');
   }
+  // variantes por classe de arma (CONFIG.ANIM_VARIANTS), guardadas como "papel__classe"
+  for (const [cls, roles] of Object.entries(CONFIG.ANIM_VARIANTS || {})) {
+    for (const [role, name] of Object.entries(roles)) {
+      const clip = THREE.AnimationClip.findByName(template.animations, name);
+      if (clip) clips[role + '__' + cls] = mixer.clipAction(clip);
+      else console.warn('[charModel] Variante "' + name + '" (papel "' + role + '", classe "' + cls + '") não encontrada.');
+    }
+  }
   if (clips.idle) clips.idle.play();
 
   const handBone = findBoneByName(scene, CONFIG.RIGHT_HAND_BONE);
@@ -184,10 +209,8 @@ export function setCharWeaponGLTF(ch, id) {
   if (!id) return;
   const w = buildWeapon(id);
   u.mount.add(w.g); u.weapon = w.g;
-  // Rotação calculada a partir da pose real das mãos (ver validate_retarget.py) — bem
-  // mais próxima do certo que o chute inicial. Pequenos ajustes finos ainda podem ser
-  // necessários; mexa esses 3 números se a arma ainda estiver um pouco torta.
-  w.g.position.set(0, 0, 0); w.g.rotation.set(-1.635, 0.007, 0.007); w.g.scale.setScalar(1.0);
+  // Ponto de partida — calibre posição/rotação/escala olhando a arma na mão do seu rig:
+  w.g.position.set(0, 0, 0); w.g.rotation.set(0, Math.PI / 2, 0); w.g.scale.setScalar(1.15);
 }
 
 function crossTo(u, role, fadeTime = CONFIG.CROSSFADE) {
@@ -199,6 +222,12 @@ function crossTo(u, role, fadeTime = CONFIG.CROSSFADE) {
 }
 
 const clampNum = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/** Se existir uma variante pra (papel, classe da arma atual), usa ela — senão cai no papel normal. */
+function resolveRole(u, role, wid) {
+  const key = role + '__' + weaponClass(wid);
+  return u.clips[key] ? key : role;
+}
 
 export function animateCharacterGLTF(ch, dt, st) {
   const u = ch.userData;
@@ -215,7 +244,7 @@ export function animateCharacterGLTF(ch, dt, st) {
   if (st.cr > 0.5) role = sp > 0.3 && u.clips.crouch ? 'crouch' : (u.clips.crouchIdle ? 'crouchIdle' : 'idle');
   else if (sp > 4.2 && u.clips.run) role = 'run';
   else if (sp > 0.3) role = 'walk';
-  crossTo(u, role);
+  crossTo(u, resolveRole(u, role, st.wid));
   const active = u.clips[u.current];
   if (active) active.timeScale = role === 'run' ? clampNum(sp / 6, 0.7, 1.4) : role === 'walk' || role === 'crouch' ? clampNum(sp / 3, 0.6, 1.6) : 1;
   u.mixer.update(dt);

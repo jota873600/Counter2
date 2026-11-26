@@ -50,6 +50,7 @@ export class CharPreview {
   setLook(skin, team = 0, weapon = 'ar') {
     if (this.ch) this.group.remove(this.ch);
     this.ch = buildCharacter(team ? 0xe8832a : TEAM_BLUE, skin);
+    this.weapon = weapon;
     setCharWeapon(this.ch, weapon);
     this.group.add(this.ch);
     this.pose(0);
@@ -59,7 +60,7 @@ export class CharPreview {
   pose(dt) {
     if (!this.ch) return;
     const sway = Math.sin(this.t * 0.7) * 0.45;
-    animateCharacter(this.ch, dt, { speed: 0, grounded: true, cr: 0, pitch: 0, yaw: Math.PI + sway + this.drag, kind: 'gun', helm: 0, armor: 0, alive: true, dv: [0, 0], kick: 0 });
+    animateCharacter(this.ch, dt, { speed: 0, grounded: true, cr: 0, pitch: 0, yaw: Math.PI + sway + this.drag, kind: 'gun', wid: this.weapon, helm: 0, armor: 0, alive: true, dv: [0, 0], kick: 0 });
   }
 
   resize() {
