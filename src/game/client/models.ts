@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { SKINS, clampSkin } from '../shared/skins';
+import { EXTERNAL_WEAPONS, buildExternalWeaponVisual } from './externalWeapon';
 
 const std = (color, rough, metal = 0) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
 export const MAT = {
@@ -37,6 +38,18 @@ const SPEC = {
 export function buildWeapon(id) {
   const g = new THREE.Group(), parts = {};
   const info = { g, parts, sightY: 0.1, lh: new THREE.Vector3(0, -0.04, -0.2), rh: new THREE.Vector3(0, -0.02, 0.0), magPos: new THREE.Vector3(0, -0.1, -0.15), scope: false, kind: 'gun' };
+  const ext = EXTERNAL_WEAPONS[id];
+  if (ext) {
+    const real = buildExternalWeaponVisual(id);
+    if (real) {
+      info.g.add(real);
+      info.lh.copy(ext.lh); info.rh.copy(ext.rh); info.magPos.copy(ext.magPos); info.sightY = ext.sightY;
+      const muzzle = new THREE.Object3D(); muzzle.position.set(0, ext.sightY, -0.3); info.g.add(muzzle); info.muzzle = muzzle;
+      return info;
+    }
+    // ainda carregando — usa uma arma procedural comum até o modelo baixado ficar pronto
+    return buildGun(id, SPEC.smg, info);
+  }
   const S = SPEC[id];
   if (S) return buildGun(id, S, info);
   if (id === 'knife') {

@@ -38,8 +38,8 @@ export function getHandMesh(side) {
 function buildHandMeshes() {
   try {
     handMeshes = {
-      right: extractRigidPart(template.scene, 'Body', ['rightHand']),
-      left: extractRigidPart(template.scene, 'Body', ['leftHand']),
+      right: extractRigidPart(template.scene, 'Body_1', ['rightHand']),
+      left: extractRigidPart(template.scene, 'Body_1', ['leftHand']),
     };
   } catch (err) {
     console.warn('[charModel] Não consegui extrair as mãos do boneco2 — primeira pessoa usa o braço procedural normalmente.', err);

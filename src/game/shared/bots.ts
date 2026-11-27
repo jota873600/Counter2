@@ -254,6 +254,7 @@ export function botBuy(sim, p) {
     else if (m() >= 5400 && r < 0.35) buy('sniper');
     else if (m() >= 2700) buy('ar');
     else if (m() >= 1800 && r < 0.4) buy('shotgun');
+    else if (m() >= 1500 && r < 0.5) buy('ak47pix');
     else if (m() >= 1200) buy('smg');
   }
   if (p.inv.secondary === 'p9' && m() >= 450 && !p.inv.primary) buy(r < 0.5 ? 'r18' : 't50');
