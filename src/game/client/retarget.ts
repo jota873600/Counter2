@@ -92,7 +92,7 @@ function sampleVec3(track, t) {
  * isto é, logo depois de carregado, antes de tocar qualquer mixer nele), a partir de um clipe
  * de origem (sourceClip) tocado num esqueleto de origem (sourceRoot) no padrão Mixamo.
  */
-export function retargetClip(sourceRoot, sourceClip, targetScene, clipName, fps = 30) {
+export function retargetClip(sourceRoot, sourceClip, targetScene, clipName, fps = 30, includeRootMotion = false) {
   const duration = sourceClip.duration;
   const nFrames = Math.max(2, Math.round(duration * fps) + 1);
   const times = new Float32Array(nFrames);
@@ -165,7 +165,10 @@ export function retargetClip(sourceRoot, sourceClip, targetScene, clipName, fps 
 
   for (const [src, tgt] of BONE_MAP) buildPair(tgt, [src]);
   buildPair(CHEST_TARGET, CHEST_EXTRA_SOURCES);
-  buildRootPosition();
+  // só aplica o deslocamento do quadril quando pedido (ex: Death) — Idle/Walk/Run do
+  // Mixamo já vêm com um vaivém de quadril próprio que brigaria com a posição de
+  // verdade que o servidor manda, causando o personagem "voltando" no lugar
+  if (includeRootMotion) buildRootPosition();
 
   if (!tracks.length) { console.warn('[retarget] nenhum osso bateu — confira BONE_MAP em retarget.ts.'); return null; }
   return new THREE.AnimationClip(clipName, duration, tracks);

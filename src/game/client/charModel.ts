@@ -74,7 +74,7 @@ export const CONFIG = {
     { url: '/models/Walk.fbx', as: 'Walk' },
     { url: '/models/Run_Forward.fbx', as: 'Run' },
     { url: '/models/Pistol_Walk.fbx', as: 'Walk_Pistol' }, // andar atirando de pistola
-    { url: '/models/Death.fbx', as: 'Death' },
+    { url: '/models/Death.fbx', as: 'Death', rootMotion: true }, // só essa precisa do quadril caindo de verdade
   ],
   USE_DRACO: false,               // true se o arquivo foi exportado com compressão Draco
   DRACO_PATH: '/draco/',          // pasta com os decoders do draco (se USE_DRACO = true)
@@ -134,12 +134,12 @@ export async function preloadCharacterModel(url = CONFIG.MODEL_URL) {
           console.warn('[charModel] Não consegui carregar a animação "' + animUrl + '".', err);
         }
       }
-      for (const { url: fbxUrl, as: clipName } of CONFIG.FBX_ANIMS) {
+      for (const { url: fbxUrl, as: clipName, rootMotion } of CONFIG.FBX_ANIMS) {
         try {
           const fbxRoot = await new FBXLoader().loadAsync(fbxUrl);
           const srcClip = fbxRoot.animations[0];
           if (!srcClip) { console.warn('[charModel] "' + fbxUrl + '" não tem nenhuma animação dentro.'); continue; }
-          const retargeted = retargetClip(fbxRoot, srcClip, gltf.scene, clipName);
+          const retargeted = retargetClip(fbxRoot, srcClip, gltf.scene, clipName, 30, !!rootMotion);
           if (retargeted) { animations.push(retargeted); console.log('[charModel] Animação "' + clipName + '" retargetada a partir de "' + fbxUrl + '".'); }
         } catch (err) {
           console.warn('[charModel] Não consegui carregar/retargetar "' + fbxUrl + '".', err);

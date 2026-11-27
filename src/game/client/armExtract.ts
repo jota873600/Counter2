@@ -20,9 +20,23 @@
 import * as THREE from 'three';
 
 function findSkinnedMeshByName(scene, name) {
-  let found = null;
-  scene.traverse((o) => { if (!found && o.isSkinnedMesh && o.name === name) found = o; });
-  return found;
+  const all = [];
+  let exact = null;
+  scene.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    all.push(o);
+    if (!exact && o.name === name) exact = o;
+  });
+  if (exact) return exact;
+  // alguns jeitos de exportar deixam o nome no node PAI (um Group em volta da malha)
+  // em vez de na malha com esqueleto em si — tenta por aí antes de desistir
+  const byParent = all.find((o) => o.parent && o.parent.name === name);
+  if (byParent) return byParent;
+  console.warn(
+    '[armExtract] Não achei "' + name + '" (nem pelo pai). Malhas com esqueleto encontradas na cena:',
+    all.map((o) => '"' + o.name + '" (pai: "' + (o.parent ? o.parent.name : '') + '", ' + o.geometry.attributes.position.count + ' vértices)')
+  );
+  return null;
 }
 
 function compAt(attr, i, k) {
@@ -61,8 +75,11 @@ export function extractRigidPart(scene, meshName, boneNames) {
   if (!wanted.size) return null;
 
   const localBone = bones.find((b) => b.name === boneNames[0]);
-  mesh.updateMatrixWorld(true);
-  localBone.updateMatrixWorld(true);
+  // atualiza a posição no mundo da RAIZ da cena pra baixo — atualizar só a malha/osso
+  // direto (updateMatrixWorld) não recalcula os pais, então podia pegar uma posição
+  // errada se a cena nunca tivesse sido "assentada" antes (updateWorldMatrix resolve isso)
+  mesh.updateWorldMatrix(true, true);
+  localBone.updateWorldMatrix(true, true);
   const invBone = new THREE.Matrix4().copy(localBone.matrixWorld).invert();
   const toLocal = new THREE.Matrix4().multiplyMatrices(invBone, mesh.matrixWorld); // malha -> mundo -> local do osso
 
