@@ -6,7 +6,7 @@
  */
 import { ICON, weaponIcon } from './icons';
 import * as THREE from 'three';
-import { W, ITEMS, SHOP_CATS } from '../shared/weapons';
+import { W, ITEMS, SHOP_CATS, ECON } from '../shared/weapons';
 import { settings, bindLabel } from './settings';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -33,7 +33,7 @@ export class HUD {
       <div class="dmgdir"></div>
       <div class="msg"><b></b><span></span></div>
       <div class="hint"></div><div class="medbar"><i></i></div><div class="spec"></div>
-      <div class="hp-box"><div class="stat" data-s="hp"><span class="ic">${ICON.health}</span><b>100</b><div class="bar"><i style="width:100%"></i></div></div><div class="stat ar" data-s="ar"><span class="ic">${ICON.shield}</span><b>0</b><small data-k="hm"></small><div class="bar ar"><i style="width:0"></i></div></div></div>
+      <div class="hp-box"><div class="stat" data-s="hp"><span class="ic">${ICON.health}</span><b>${ECON.MAX_HP}</b><div class="bar"><i style="width:100%"></i></div></div><div class="stat ar" data-s="ar"><span class="ic">${ICON.shield}</span><b>0</b><small data-k="hm"></small><div class="bar ar"><i style="width:0"></i></div></div></div>
       <div class="money"><span class="ic">${ICON.coins}</span><span data-k="mo">$800</span></div>
       <div class="chatlog"></div>
       <div class="keybar"></div>
@@ -170,7 +170,7 @@ export class HUD {
   set(k, v) { if (this.cache[k] === v) return false; this.cache[k] = v; return true; }
   update(s) {
     const q = this.q;
-    if (this.set('hp', s.hp)) { const e = q('[data-s=hp]'); e.querySelector('b').textContent = s.hp; e.querySelector('i').style.width = s.hp + '%'; e.classList.toggle('low', s.hp <= 30); }
+    if (this.set('hp', s.hp)) { const e = q('[data-s=hp]'); e.querySelector('b').textContent = s.hp; e.querySelector('i').style.width = (s.hp / ECON.MAX_HP * 100) + '%'; e.classList.toggle('low', s.hp <= ECON.MAX_HP * 0.3); }
     if (this.set('ar', s.ar + '|' + s.hm)) { const e = q('[data-s=ar]'); e.querySelector('b').textContent = s.ar; e.querySelector('i').style.width = s.ar + '%'; q('[data-k=hm]').textContent = s.hm ? '+cap' : ''; }
     if (this.set('mo', s.mo)) q('[data-k=mo]').textContent = '$' + s.mo;
     if (this.set('wn', s.wn)) q('[data-k=wn]').textContent = s.wn;

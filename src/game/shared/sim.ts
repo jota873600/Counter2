@@ -21,7 +21,7 @@ class Player {
     this.ping = 0; this.kills = 0; this.deaths = 0; this.assists = 0; this.dmg = 0; this.money = ECON.START;
     this.q = []; this.budget = 0.1; this.ack = 0; this.clock = 0; this.sh = 0;
     this.x = 0; this.y = 0; this.z = 0; this.vx = 0; this.vy = 0; this.vz = 0; this.yaw = 0; this.pitch = 0; this.cr = 0; this.g = true; this.speed = 0;
-    this.alive = false; this.hp = 100; this.hist = []; this.dv = [0, 0]; this.walk = false;
+    this.alive = false; this.hp = ECON.MAX_HP; this.hist = []; this.dv = [0, 0]; this.walk = false;
     this.resetLoadout();
   }
   resetLoadout() {
@@ -68,7 +68,7 @@ export class Sim {
       for (const id of Object.keys(p.ammo)) { const w = W[id]; if (p.ammo[id]) p.ammo[id].res = Math.max(p.ammo[id].res, w.res); }
       const side = this.sideOf[p.team], sp = this.map.spawns[side];
       const s = sp[idx[p.team]++ % sp.length];
-      Object.assign(p, { x: s.x, z: s.z, y: 0, vx: 0, vy: 0, vz: 0, yaw: s.yaw, pitch: 0, cr: 0, g: true, alive: true, hp: 100, hist: [],
+      Object.assign(p, { x: s.x, z: s.z, y: 0, vx: 0, vy: 0, vz: 0, yaw: s.yaw, pitch: 0, cr: 0, g: true, alive: true, hp: ECON.MAX_HP, hist: [],
         blind: 0, rlEnd: 0, med: false, medT: 0, punch: [0, 0], bloom: 0, shotIdx: 0, lastShot: -9, nextFire: 0, drawEnd: p.clock + 0.6,
         fireHeld: false, aimHeld: false, aim: false, roundDmg: {}, bought: false, botBuyAt: this.time + 0.5 + rnd() * 3, lost: false, q: [], budget: 0.1, ai: null });
       if (!p.inv[p.cur === 'primary' || p.cur === 'secondary' ? p.cur : 'knife'] && !['frag', 'smoke', 'flash', 'medkit'].includes(p.cur)) p.cur = 'knife';
@@ -173,8 +173,8 @@ export class Sim {
     }
     if (p.med) {
       p.medT += dt;
-      p.hp = Math.min(100, p.hp + (ECON.MEDHEAL / ECON.MEDTIME) * dt);
-      if (p.medT >= ECON.MEDTIME || p.hp >= 100) { p.med = false; p.inv.medkit = Math.max(0, p.inv.medkit - 1); this.ev.push({ t: 'meddone', v: p.id }); this.sel(p, 'prev', true); }
+      p.hp = Math.min(ECON.MAX_HP, p.hp + (ECON.MEDHEAL / ECON.MEDTIME) * dt);
+      if (p.medT >= ECON.MEDTIME || p.hp >= ECON.MAX_HP) { p.med = false; p.inv.medkit = Math.max(0, p.inv.medkit - 1); this.ev.push({ t: 'meddone', v: p.id }); this.sel(p, 'prev', true); }
     }
     const firing = ck - p.lastShot < 0.12;
     const k = Math.exp(-dt * (firing ? 1.2 : 6.5));
@@ -370,7 +370,7 @@ export class Sim {
   }
 
   startMed(p) {
-    if (p.inv.medkit <= 0 || p.hp >= 100 || p.med) return;
+    if (p.inv.medkit <= 0 || p.hp >= ECON.MAX_HP || p.med) return;
     p.med = true; p.medT = 0; this.ev.push({ t: 'med', v: p.id });
   }
 
@@ -410,7 +410,7 @@ export class Sim {
       case 'buy': this.buy(p, m.item); break;
       case 'drop': this.doDrop(p); break;
       case 'use': this.use(p); break;
-      case 'med': if (p.alive && p.inv.medkit > 0 && p.hp < 100) { this.sel(p, 'medkit'); this.startMed(p); } break;
+      case 'med': if (p.alive && p.inv.medkit > 0 && p.hp < ECON.MAX_HP) { this.sel(p, 'medkit'); this.startMed(p); } break;
       case 'ping': p.ping = clamp(+m.ping || 0, 0, 1000); break;
     }
   }

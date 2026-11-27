@@ -19,7 +19,7 @@ import { NetClient, LocalTransport } from './net';
 import { settings, saveSettings, bindLabel, loadIdentity, saveIdentity } from './settings';
 import { getMap } from '../shared/map';
 import { movePlayer, eyeH, losClear } from '../shared/physics';
-import { W, PL } from '../shared/weapons';
+import { W, PL, ECON } from '../shared/weapons';
 import { CSS } from './styles';
 import { clampSkin } from '../shared/skins';
 
@@ -435,7 +435,7 @@ class App {
     this.fx.update(dt, cam, innerHeight); this.audio.setListener(cam.position.x, cam.position.y, cam.position.z, yawV);
     // Pós-processamento (dano / flash)
     this.dmg = Math.max(0, this.dmg - dt * 0.9);
-    const low = you.hp < 30 && alive ? 0.2 + 0.1 * Math.sin(performance.now() / 180) : 0;
+    const low = you.hp < ECON.MAX_HP * 0.3 && alive ? 0.2 + 0.1 * Math.sin(performance.now() / 180) : 0;
     eng.grade.uniforms.uDamage.value = Math.min(1, this.dmg + low);
     eng.grade.uniforms.uFlash.value = clamp(you.bl / 1.0, 0, 1) * 0.97;
     this.updateHud(w, you, wd, ip, aimWanted, dt, alive);

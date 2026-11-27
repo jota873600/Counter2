@@ -16,6 +16,7 @@ export const PL = {
 export const ECON = {
   START: 800, MAX: 16000, WIN: 3250, LOSS: 1400, STEP: 500, STREAKMAX: 4,
   BUY: 15, ROUND: 105, END: 5, WINROUNDS: 8, HALF: 7, MEDTIME: 3.5, MEDHEAL: 45,
+  MAX_HP: 200,
 };
 
 /** Multiplicadores de dano por parte do corpo. */
