@@ -17,9 +17,13 @@ export const EXTERNAL_WEAPONS = {
     url: '/models/weapons/ak47pix/scene.gltf',
     // Ponto de partida — ainda não vi o modelo rodando de verdade, então isso tudo é
     // chute inicial (igual a arma na mão do personagem 3D): calibre depois de testar.
-    scale: 0.045,                         // o arquivo vem em "unidades" bem maiores que metros
-    rotation: new THREE.Euler(0, Math.PI / 2, 0), // tenta alinhar o cano com -Z (convenção do jogo)
-    position: new THREE.Vector3(0, -0.02, 0.1),   // desloca até a empunhadura ficar na origem
+    scale: 0.043,                          // o arquivo vem em "unidades" bem maiores que metros
+    // o cano do modelo aponta no eixo Y dele (comprido nessa direção); girar no eixo Y (como
+    // eu tinha feito antes) só "roda" a arma em torno do próprio cano, não muda pra onde ele
+    // aponta — por isso ela sumia (ficava apontando pra cima/baixo). O jeito certo é girar no
+    // eixo X, pra deitar o cano e apontar ele pra frente (-Z, convenção do jogo):
+    rotation: new THREE.Euler(-Math.PI / 2, 0, 0),
+    position: new THREE.Vector3(0, 0, 0),  // a área do gatilho/manejo já nasce perto da origem do modelo
     lh: new THREE.Vector3(-0.01, -0.05, -0.18),   // mão de apoio (guarda-mão)
     rh: new THREE.Vector3(0, 0, 0.02),            // mão de disparo (empunhadura)
     magPos: new THREE.Vector3(0, -0.1, -0.1),
