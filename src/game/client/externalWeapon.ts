@@ -45,7 +45,10 @@ export function preloadExternalWeapons() {
       gltf.scene.position.copy(spec.position);
       wrap.add(gltf.scene);
       templates[id] = wrap;
-      console.log('[externalWeapon] "' + id + '" carregado de "' + spec.url + '".');
+      // marca de build, só pra confirmar no console se essa versão do código é a que está
+      // rodando de verdade (serviços como PWA/Service Worker às vezes servem JS antigo em
+      // cache) — se você não ver "build v37" aqui, o navegador ainda tá com a versão velha.
+      console.log('[externalWeapon] "' + id + '" carregado de "' + spec.url + '" — build v37, rotX=' + spec.rotation.x.toFixed(3));
     }).catch((err) => {
       console.warn('[externalWeapon] Não consegui carregar "' + id + '" — usando a arma procedural normalmente.', err);
     });
